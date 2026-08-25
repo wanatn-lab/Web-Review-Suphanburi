@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: var(--font-noto-sans-thai), var(--font-kanit), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-kanit), var(--font-noto-sans-thai), system-ui, sans-serif;
+}

@@ -1,1 +1,175 @@
-aW1wb3J0IHsgTmV4dFJlc3BvbnNlIH0gZnJvbSAibmV4dC9zZXJ2ZXIiOwppbXBvcnQgeyBnZXRTdXBhYmFzZUFkbWluIH0gZnJvbSAiQC9saWIvc3VwYWJhc2UtYWRtaW4iOwppbXBvcnQgewogIGJ1aWxkU2VvRGVzY3JpcHRpb24sCiAgYnVpbGRTbHVnRnJvbVBvc3RJZCwKICBidWlsZFRpdGxlRnJvbUNhcHRpb24sCiAgZmV0Y2hQYWdlVmlkZW9zLAogIGd1ZXNzQ2F0ZWdvcnksCn0gZnJvbSAiQC9saWIvZmFjZWJvb2stc3luYyI7CmltcG9ydCB7IGdlb2NvZGVGcm9tQ2FwdGlvbiwgaXNHZW9jb2RpbmdFbmFibGVkIH0gZnJvbSAiQC9saWIvZ2VvY29kaW5nIjsKCi8vIGFwcC9hcGkvc3luYy1mYWNlYm9vay9yb3V0ZS50cwovLyBSb3V0ZSBIYW5kbGVyIOC4l+C4teC5iOC4lOC4tuC4h+C4hOC4peC4tOC4m+C4p+C4tOC4lOC4teC5guC4reC4peC5iOC4suC4quC4uOC4lOC4iOC4suC4gSBGYWNlYm9vayBQYWdlICLguKPguLXguKfguLTguKfguKrguLjguJ7guKPguKPguJPguJrguLjguKPguLUiIOC4oeC4sgovLyB1cHNlcnQg4LmA4LiC4LmJ4Liy4LiV4Liy4Lij4Liy4LiHIHJldmlld3Mg4LiC4Lit4LiHIFN1cGFiYXNlIOC4reC4seC4leC5guC4meC4oeC4seC4leC4tCDguJ7guKPguYnguK3guKHguYDguJTguLLguKvguKHguKfguJTguKvguKHguLnguYggKyDguYDguILguLXguKLguJkKLy8g4LiE4Liz4Lit4LiY4Li04Lia4Liy4Lii4LiX4Li14LmI4LiJ4Li14LiUIGtleXdvcmQgU0VPL0dFTyDguYPguKvguYnguK3guLHguJXguYLguJnguKHguLHguJXguLQKLy8KLy8g4LmA4Lij4Li14Lii4LiB4LmD4LiK4LmJ4LiH4Liy4LiZ4LmE4LiU4LmJIDIg4LiX4Liy4LiHOgovLyAgMS4gVmVyY2VsIENyb24gSm9iICjguJTguLkgdmVyY2VsLmpzb24pIOKAlCBWZXJjZWwg4LiI4Liw4LmB4LiZ4LiaIGhlYWRlcgovLyAgICAgIkF1dGhvcml6YXRpb246IEJlYXJlciA8Q1JPTl9TRUNSRVQ+IiDguKHguLLguYPguKvguYnguYDguK3guIfguK3guLHguJXguYLguJnguKHguLHguJXguLTguJfguLjguIHguITguKPguLHguYnguIfguJfguLXguYjguKLguLTguIfguJXguLLguKHguJXguLLguKPguLLguIcKLy8gIDIuIOC5gOC4o+C4teC4ouC4geC5gOC4reC4h+C4lOC5ieC4p+C4ouC4oeC4t+C4rSAo4LmA4LiX4LiqL+C4quC4seC5iOC4h+C4i+C4tOC4h+C4geC5jOC4l+C4seC4meC4l+C4tSkg4oCUIOC5gOC4m+C4tOC4lOC4peC4tOC4h+C4geC5jDoKLy8gICAgIGh0dHBzOi8vPOC5guC4lOC5gOC4oeC4meC5gOC4p+C5h+C4mj4vYXBpL3N5bmMtZmFjZWJvb2s/c2VjcmV0PTxDUk9OX1NFQ1JFVD4KLy8KLy8g4LiV4Lix4LmJ4LiH4LmD4LiI4LmD4Lir4LmJICJpbnNlcnQg4LmA4LiJ4Lie4Liy4Liw4LmC4Lie4Liq4LiV4LmM4LmD4Lir4Lih4LmI4LiX4Li14LmI4Lii4Lix4LiH4LmE4Lih4LmI4LmA4LiE4Lii4LiU4Li24LiH4Lih4LiyIiDguYDguJfguYjguLLguJnguLHguYnguJkgKOC5gOC4iuC5h+C4hOC4iOC4suC4gQovLyBmYWNlYm9va19wb3N0X2lkKSDguYHguKXguLDguIjguLDguYTguKHguYjguYHguJXguLDguYHguJbguKfguJfguLXguYjguYDguITguKLguJTguLbguIfguKHguLLguYHguKXguYnguKcg4LmB4Lih4LmJ4LiV4LmJ4LiZ4LiX4Liy4LiH4LiI4Liw4LmB4LiB4LmJ4LmB4LiE4Lib4LiK4Lix4LmI4LiZ4LiX4Li14Lir4Lil4Lix4LiHCi8vIOKAlCDguJvguYnguK3guIfguIHguLHguJnguYTguKHguYjguYPguKvguYnguKPguLDguJrguJrguYTguJvguYDguILguLXguKLguJnguJfguLHguJogdGl0bGUvY2F0ZWdvcnkg4LiX4Li14LmI4LiX4Li14Lih4LiB4Liy4Lij4LiV4Lil4Liy4LiU4LmB4LiB4LmJ4LmE4LiC4LmA4Lit4LiH4LmD4LiZ4Lig4Liy4Lii4Lir4Lil4Lix4LiHCgpleHBvcnQgY29uc3QgZHluYW1pYyA9ICJmb3JjZS1keW5hbWljIjsgLy8g4Lir4LmJ4Liy4LihIGNhY2hlIHJlc3BvbnNlIOC4guC4reC4hyByb3V0ZSDguJnguLXguYnguYDguJTguYfguJTguILguLLguJQKCi8qKiDguKvguJnguYjguKfguIfguKPguLDguKvguKfguYjguLLguIfguIHguLLguKPguKLguLTguIcgR2VvY29kaW5nIOC5geC4leC5iOC4peC4sOC4hOC4o+C4seC5ieC4hyDigJQg4LiB4Lix4LiZ4LiK4LiZIHJhdGUgbGltaXQg4LiC4Lit4LiHIEdvb2dsZSBNYXBzIEFQSSAqLwpjb25zdCBHRU9DT0RFX0RFTEFZX01TID0gMjAwOwoKY29uc3Qgc2xlZXAgPSAobXM6IG51bWJlcikgPT4gbmV3IFByb21pc2UoKHJlc29sdmUpID0+IHNldFRpbWVvdXQocmVzb2x2ZSwgbXMpKTsKCi8qKiDguYHguJbguKfguJfguLXguYjguIjguLAgaW5zZXJ0IOC4peC4h+C4leC4suC4o+C4suC4hyByZXZpZXdzIOKAlCDguJvguKPguLDguIHguLLguKggdHlwZSDguYTguKfguYnguIrguLHguJTguYYg4LmA4Lie4Li34LmI4Lit4LmD4Lir4LmJ4LmA4LiV4Li04Lih4Lie4Li04LiB4Lix4LiU4LiX4Li14Lir4Lil4Lix4LiH4LmE4LiU4LmJCiAqICAo4LiW4LmJ4Liy4Lib4Lil4LmI4Lit4Lii4LmD4Lir4LmJIFRTIGluZmVyIOC4iOC4suC4gSBvYmplY3QgbGl0ZXJhbCDguJfguLXguYjguKHguLUgbGF0aXR1ZGU6IG51bGwg4Lih4Lix4LiZ4LiI4Liw4Lil4LmH4Lit4LiBIHR5cGUg4LmA4Lib4LmH4LiZIG51bGwpICovCmludGVyZmFjZSBSZXZpZXdJbnNlcnRSb3cgewogIHRpdGxlOiBzdHJpbmc7CiAgc2x1Zzogc3RyaW5nOwogIGRlc2NyaXB0aW9uOiBzdHJpbmc7CiAgY2F0ZWdvcnk6IHN0cmluZzsKICBjb3Zlcl9pbWFnZTogc3RyaW5nIHwgbnVsbDsKICBmYWNlYm9va19lbWJlZF91cmw6IHN0cmluZzsKICB0aWt0b2tfZW1iZWRfdXJsOiBzdHJpbmcgfCBudWxsOwogIGdvb2dsZV9tYXBfZW1iZWRfdXJsOiBzdHJpbmcgfCBudWxsOwogIGxhdGl0dWRlOiBudW1iZXIgfCBudWxsOwogIGxvbmdpdHVkZTogbnVtYmVyIHwgbnVsbDsKICBsb2NhdGlvbl90ZXh0OiBzdHJpbmcgfCBudWxsOwogIGZhY2Vib29rX3Bvc3RfaWQ6IHN0cmluZzsKICBjcmVhdGVkX2F0OiBzdHJpbmc7Cn0KCmZ1bmN0aW9uIGlzQXV0aG9yaXplZChyZXF1ZXN0OiBSZXF1ZXN0KTogYm9vbGVhbiB7CiAgY29uc3Qgc2VjcmV0ID0gcHJvY2Vzcy5lbnYuQ1JPTl9TRUNSRVQ7CiAgaWYgKCFzZWNyZXQpIHJldHVybiBmYWxzZTsgLy8g4LmE4Lih4LmI4LiV4Lix4LmJ4LiH4LiE4LmI4LiyIHNlY3JldCDguYTguKfguYkgPSDguJvguLTguJTguYTguKHguYjguYPguKvguYnguYPguITguKPguKLguLTguIfguYTguJTguYnguYDguKXguKIgKGZhaWwgc2FmZSkKCiAgY29uc3QgYXV0aEhlYWRlciA9IHJlcXVlc3QuaGVhZGVycy5nZXQoImF1dGhvcml6YXRpb24iKTsKICBpZiAoYXV0aEhlYWRlciA9PT0gYEJlYXJlciAke3NlY3JldH1gKSByZXR1cm4gdHJ1ZTsKCiAgY29uc3QgdXJsID0gbmV3IFVSTChyZXF1ZXN0LnVybCk7CiAgaWYgKHVybC5zZWFyY2hQYXJhbXMuZ2V0KCJzZWNyZXQiKSA9PT0gc2VjcmV0KSByZXR1cm4gdHJ1ZTsKCiAgcmV0dXJuIGZhbHNlOwp9CgpleHBvcnQgYXN5bmMgZnVuY3Rpb24gR0VUKHJlcXVlc3Q6IFJlcXVlc3QpIHsKICBpZiAoIWlzQXV0aG9yaXplZChyZXF1ZXN0KSkgewogICAgcmV0dXJuIE5leHRSZXNwb25zZS5qc29uKHsgZXJyb3I6ICJVbmF1dGhvcml6ZWQiIH0sIHsgc3RhdHVzOiA0MDEgfSk7CiAgfQoKICBjb25zdCBwYWdlSWQgPSBwcm9jZXNzLmVudi5GQl9QQUdFX0lEOwogIGNvbnN0IGFjY2Vzc1Rva2VuID0gcHJvY2Vzcy5lbnYuRkJfUEFHRV9BQ0NFU1NfVE9LRU47CgogIGlmICghcGFnZUlkIHx8ICFhY2Nlc3NUb2tlbikgewogICAgcmV0dXJuIE5leHRSZXNwb25zZS5qc29uKAogICAgICB7IGVycm9yOiAiTWlzc2luZyBGQl9QQUdFX0lEIG9yIEZCX1BBR0VfQUNDRVNTX1RPS0VOIGVudmlyb25tZW50IHZhcmlhYmxlIiB9LAogICAgICB7IHN0YXR1czogNTAwIH0KICAgICk7CiAgfQoKICB0cnkgewogICAgY29uc3Qgc3VwYWJhc2VBZG1pbiA9IGdldFN1cGFiYXNlQWRtaW4oKTsKCiAgICAvLyAxKSDguJTguLbguIfguITguKXguLTguJvguKXguYjguLLguKrguLjguJQgMTAg4Lij4Liy4Lii4LiB4Liy4Lij4LiI4Liy4LiBIEZhY2Vib29rIFBhZ2UKICAgIGNvbnN0IHZpZGVvcyA9IGF3YWl0IGZldGNoUGFnZVZpZGVvcyhwYWdlSWQsIGFjY2Vzc1Rva2VuLCAxMCk7CgogICAgaWYgKHZpZGVvcy5sZW5ndGggPT09IDApIHsKICAgICAgcmV0dXJuIE5leHRSZXNwb25zZS5qc29uKHsgZmV0Y2hlZDogMCwgaW5zZXJ0ZWQ6IDAsIHNraXBwZWQ6IDAsIG1lc3NhZ2U6ICLguYTguKHguYjguJ7guJrguKfguLTguJTguLXguYLguK3guJrguJnguYDguJ7guIgiIH0pOwogICAgfQoKICAgIC8vIDIpIOC5gOC4iuC5h+C4hOC4p+C5iOC4siBwb3N0IGlkIOC5hOC4q+C4meC5gOC4hOC4ouC4lOC4tuC4h+C4oeC4suC5geC4peC5ieC4p+C4muC5ieC4suC4hyAo4LiB4Lix4LiZ4LiL4LmJ4LizICsg4LiB4Lix4LiZ4LmA4LiC4Li14Lii4LiZ4LiX4Lix4Lia4LiC4Lit4LiH4LiX4Li14LmI4LmB4LiB4LmJ4LmE4LiC4LmA4Lit4LiH4LmB4Lil4LmJ4LinKQogICAgY29uc3QgcG9zdElkcyA9IHZpZGVvcy5tYXAoKHYpID0+IHYuaWQpOwogICAgY29uc3QgeyBkYXRhOiBleGlzdGluZ1Jvd3MsIGVycm9yOiBleGlzdGluZ0Vycm9yIH0gPSBhd2FpdCBzdXBhYmFzZUFkbWluCiAgICAgIC5mcm9tKCJyZXZpZXdzIikKICAgICAgLnNlbGVjdCgiZmFjZWJvb2tfcG9zdF9pZCIpCiAgICAgIC5pbigiZmFjZWJvb2tfcG9zdF9pZCIsIHBvc3RJZHMpOwoKICAgIGlmIChleGlzdGluZ0Vycm9yKSB7CiAgICAgIHRocm93IG5ldyBFcnJvcihg4LiV4Lij4Lin4LiI4Liq4Lit4Lia4LmC4Lie4Liq4LiV4LmM4LiX4Li14LmI4Lih4Li14Lit4Lii4Li54LmI4LmB4Lil4LmJ4Lin4LmE4Lih4LmI4Liq4Liz4LmA4Lij4LmH4LiIOiAke2V4aXN0aW5nRXJyb3IubWVzc2FnZX1gKTsKICAgIH0KCiAgICBjb25zdCBleGlzdGluZ0lkcyA9IG5ldyBTZXQoKGV4aXN0aW5nUm93cyA/PyBbXSkubWFwKChyKSA9PiByLmZhY2Vib29rX3Bvc3RfaWQpKTsKICAgIGNvbnN0IG5ld1ZpZGVvcyA9IHZpZGVvcy5maWx0ZXIoKHYpID0+ICFleGlzdGluZ0lkcy5oYXModi5pZCkpOwoKICAgIGlmIChuZXdWaWRlb3MubGVuZ3RoID09PSAwKSB7CiAgICAgIHJldHVybiBOZXh0UmVzcG9uc2UuanNvbih7CiAgICAgICAgZmV0Y2hlZDogdmlkZW9zLmxlbmd0aCwKICAgICAgICBpbnNlcnRlZDogMCwKICAgICAgICBza2lwcGVkOiB2aWRlb3MubGVuZ3RoLAogICAgICAgIG1lc3NhZ2U6ICLguYTguKHguYjguKHguLXguITguKXguLTguJvguYPguKvguKHguYgg4oCUIOC4l+C4uOC4geC4hOC4peC4tOC4m+C5gOC4hOC4ouC4luC4ueC4geC4lOC4tuC4h+C5gOC4guC5ieC4suC4o+C4sOC4muC4muC5geC4peC5ieC4pyIsCiAgICAgIH0pOwogICAgfQoKICAgIC8vIDMpIOC5geC4m+C4peC4h+C5gOC4m+C5h+C4meC5geC4luC4p+C4quC4s+C4q+C4o+C4seC4muC4leC4suC4o+C4suC4hyByZXZpZXdzIOC4nuC4o+C5ieC4reC4oeC5gOC4lOC4siBjYXRlZ29yeSArIOC5gOC4guC4teC4ouC4meC4hOC4s+C4reC4mOC4tOC4muC4suC4oiBTRU8g4Lit4Lix4LiV4LmC4LiZ4Lih4Lix4LiV4Li0CiAgICBjb25zdCByb3dzOiBSZXZpZXdJbnNlcnRSb3dbXSA9IG5ld1ZpZGVvcy5tYXAoKHZpZGVvKSA9PiB7CiAgICAgIGNvbnN0IGNhcHRpb24gPSB2aWRlby5kZXNjcmlwdGlvbiA/PyAiIjsKICAgICAgcmV0dXJuIHsKICAgICAgICB0aXRsZTogYnVpbGRUaXRsZUZyb21DYXB0aW9uKHZpZGVvLmRlc2NyaXB0aW9uLCB2aWRlby5pZCksCiAgICAgICAgc2x1ZzogYnVpbGRTbHVnRnJvbVBvc3RJZCh2aWRlby5pZCksCiAgICAgICAgZGVzY3JpcHRpb246IGJ1aWxkU2VvRGVzY3JpcHRpb24odmlkZW8uZGVzY3JpcHRpb24pLAogICAgICAgIGNhdGVnb3J5OiBndWVzc0NhdGVnb3J5KGNhcHRpb24pLAogICAgICAgIGNvdmVyX2ltYWdlOiB2aWRlby5waWN0dXJlLAogICAgICAgIGZhY2Vib29rX2VtYmVkX3VybDogdmlkZW8ucGVybWFsaW5rX3VybCwKICAgICAgICB0aWt0b2tfZW1iZWRfdXJsOiBudWxsLAogICAgICAgIGdvb2dsZV9tYXBfZW1iZWRfdXJsOiBudWxsLAogICAgICAgIGxhdGl0dWRlOiBudWxsLAogICAgICAgIGxvbmdpdHVkZTogbnVsbCwKICAgICAgICBsb2NhdGlvbl90ZXh0OiBudWxsLAogICAgICAgIGZhY2Vib29rX3Bvc3RfaWQ6IHZpZGVvLmlkLAogICAgICAgIGNyZWF0ZWRfYXQ6IHZpZGVvLmNyZWF0ZWRfdGltZSwKICAgICAgfTsKICAgIH0pOwoKICAgIC8vIDQpIOC5gOC4leC4tOC4oeC4nuC4tOC4geC4seC4lOC4reC4seC4leC5guC4meC4oeC4seC4leC4tOC4iOC4suC4geC5geC4hOC4m+C4iuC4seC5iOC4mSAoR2VvY29kaW5nKSDigJQgYmVzdCBlZmZvcnQg4Lil4LmJ4Lin4LiZ4LmGCiAgICAvLyDguJbguYnguLLguYTguKHguYjguYTguJTguYnguJXguLHguYnguIcgR0VPQ09ESU5HX0FQSV9LRVkg4LiB4LmH4LiC4LmJ4Liy4Lih4LiX4Lix4LmJ4LiH4LiB4LmJ4Lit4LiZ4LmE4Lib4LmA4Lil4LiiICjguYTguKHguYjguYDguKrguLXguKLguYDguKfguKXguLLguKvguJnguYjguKfguIcgMjAwbXMg4Lif4Lij4Li14LmGKQogICAgLy8g4LmB4Lil4Liw4LiW4LmJ4Liy4LiV4Lix4Lin4LmE4Lir4LiZIGdlb2NvZGUg4LmE4Lih4LmI4Lie4LmI4Liy4LiZIOC4geC5h+C4m+C4peC5iOC4reC4ouC5g+C4q+C5iSBsYXRpdHVkZS9sb25naXR1ZGUg4LmA4Lib4LmH4LiZIG51bGwg4LiV4Liy4Lih4LmA4LiU4Li04LihCiAgICAvLyDigJQg4LiB4Liy4Lij4LiL4Li04LiH4LiB4LmM4LiV4LmJ4Lit4LiH4LiC4LmJ4Liy4Lih4Lih4Li14Lie4Li04LiB4Lix4LiUIuC5hOC4oeC5iOC4luC5ieC4suC4ouC4seC4h+C5gOC4k+C4lOC5h+C4lOC4guC4suC4lCIg4LmA4Lin4LmH4LmA4Lij4Li34LmI4Lit4LiH4Lie4Li04LiB4Lix4LiU4LiX4Li14Lin4Lij4Li04LiHCiAgICBsZXQgZ2VvY29kZWRDb3VudCA9IDA7CgogICAgaWYgKGlzR2VvY29kaW5nRW5hYmxlZCgpKSB7CiAgICAgIGZvciAobGV0IGkgPSAwOyBpIDwgcm93cy5sZW5ndGg7IGkrKykgewogICAgICAgIC8vIOC4q+C4meC5iOC4p+C4h+C5gOC4ieC4nuC4suC4sCAi4Lij4Liw4LiH4Lij4Lin4LmJ4Liy4LiHIiDguIHguLLguKPguKLguLTguIfguYHguJXguYjguKXguLDguITguKPguLHguYnguIfguYTguKHguYjguKvguJnguYjguKfguIfguIHguYjguK3guJnguJXguLHguKfguYHguKPguIEvCiAgICAgICAgLy8g4Lir4Lil4Lix4LiH4LiV4Lix4Lin4Kq4Li44LiU4LiX4LmJ4Liy4LiiCiAgICAgICAgaWYgKGkgPiAwKSBhd2FpdCBzbGVlcChHRU9DT0RFX0RFTEFZX01TKTsKCiAgICAgICAgY29uc3QgZ2VvID0gYXdhaXQgZ2VvY29kZUZyb21DYXB0aW9uKG5ld1ZpZGVvc1tpXS5kZXNjcmlwdGlvbik7CiAgICAgICAgaWYgKCFnZW8pIGNvbnRpbnVlOwoKICAgICAgICByb3dzW2ldLmxhdGl0dWRlID0gZ2VvLmxhdDsKICAgICAgICByb3dzW2ldLmxvbmdpdHVkZSA9IGdlby5sbmc7CiAgICAgICAgcm93c1tpXS5sb2NhdGlvbl90ZXh0ID0gZ2VvLmxvY2F0aW9uVGV4dDsKICAgICAgICBnZW9jb2RlZENvdW50Kys7CiAgICAgIH0KICAgIH0KCiAgICBjb25zdCB7IGVycm9yOiBpbnNlcnRFcnJvciB9ID0gYXdhaXQgc3VwYWJhc2VBZG1pbi5mcm9tKCJyZXZpZXdzIikuaW5zZXJ0KHJvd3MpOwoKICAgIGlmIChpbnNlcnRFcnJvcikgewogICAgICB0aHJvdyBuZXcgRXJyb3IoYOC4muC4seC4meC4l+C4tuC4geC4peC4hyBTdXBhYmFzZSDguYTguKHguYjguKrguLPguYDguKPguYfguIg6ICR7aW5zZXJ0RXJyb3IubWVzc2FnZX1gKTsKICAgIH0KCiAgICByZXR1cm4gTmV4dFJlc3BvbnNlLmpzb24oewogICAgICBmZXRjaGVkOiB2aWRlb3MubGVuZ3RoLAogICAgICBpbnNlcnRlZDogcm93cy5sZW5ndGgsCiAgICAgIHNraXBwZWQ6IHZpZGVvcy5sZW5ndGggLSByb3dzLmxlbmd0aCwKICAgICAgaW5zZXJ0ZWRUaXRsZXM6IHJvd3MubWFwKChyKSA9PiByLnRpdGxlKSwKICAgICAgZ2VvY29kZWRDb3VudCwKICAgICAgbm90ZTogIWlzR2VvY29kaW5nRW5hYmxlZCgpCiAgICAgICAgPyAi4Lij4Li14Lin4Li04Lin4LmD4Lir4Lih4LmI4Lii4Lix4LiH4LmE4Lih4LmI4Lih4Li14J7guLTguIHguLHguJQgKGxhdGl0dWRlL2xvbmdpdHVkZSkg4LmB4Lil4LiwIGxvY2F0aW9uX3RleHQg4oCUIOC5gOC4guC5ieC4suC5hOC4m+C5gOC4nuC4tOC5iOC4oeC5gOC4reC4h+C5g+C4meC4leC4suC4o+C4suC4hyBTdXBhYmFzZSDguYDguJ7guLfguYjguK3guYPguKvguYkgR29vZ2xlIE1hcHMgKyBHZW8tU0VPIOC4l+C4s+C4h+C4suC4meC5gOC4leC5h+C4oeC4o+C4ueC4m+C5geC4muC4miAo4Lir4Lij4Li34Lit4LiV4Lix4LmJ4LiH4LiE4LmI4LiyIEdFT0NPRElOR19BUElfS0VZIOC5gOC4nuC4t+C5iOC4reC5g+C4q+C5ieC4o+C4sOC4muC4muC5gOC4leC4tOC4oeC4nuC4tOC4geC4seC4lOC5g+C4q+C5ieC4reC4seC4leC5guC4meC4oeC4seC4leC4tCkiCiAgICAgICAgOiBg4LmA4LiV4Li04Lih4Lie4Li04LiB4Lix4LiU4Lit4Lix4LiV4LmC4LiZ4Lih4Lix4LiV4Li04Liq4Liz4LmA4Lij4LmH4LiIICR7Z2VvY29kZWRDb3VudH0vJHtyb3dzLmxlbmd0aH0g4Lij4Liy4Lii4LiB4Liy4Lij4JCUIOC4l+C4teC5iOC5gOC4q+C4peC4t+C4rSAo4LiW4LmJ4Liy4LiT4Li04Li0KSDigJTguJXguYnguK3guIHguYDguILguYnguLLguYTguJvguYDguJ7guLTguYjguKHguYDguK3guIfguYPguJnguJXguLLguKPguLLguIcgU3VwYWJhc2UgfCDguKvguKHguLLguKLguYDguKvguJXguLg6IOC4nuC4tOC4geC4seC4lOC4iOC4suC4gSBHZW9jb2Rpbmcg4LmA4Lib4LmH4LiZ4Lij4Liw4LiU4Lix4Lia4Lit4Liz4LmA4Lig4LitL+C4iOC4seC4h+C4q+C4p+C4seC4lCDguYTguKHguYjguYPguIrguYjguKvguJnguYnguLLguKPguYnguLLguJnguIjguKPguLTguIcg4LmB4LiB4LmJ4LmD4Lir4LmJ4LmB4Lih4LmI4LiZ4LmE4LiU4LmJ4Lig4Liy4Lii4Lir4Lil4Lix4LiHYCwKICAgIH0pOwogIH0gY2F0Y2ggKGVycikgewogICAgY29uc3QgbWVzc2FnZSA9IGVyciBpbnN0YW5jZW9mIEVycm9yID8gZXJyLm1lc3NhZ2UgOiAiVW5rbm93biBlcnJvciI7CiAgICBjb25zb2xlLmVycm9yKCJbc3luYy1mYWNlYm9va106IiwgbWVzc2FnZSk7CiAgICByZXR1cm4gTmV4dFJlc3BvbnNlLmpzb24oeyBlcnJvcjogbWVzc2FnZSB9LCB7IHN0YXR1czogNTAwIH0pOwogIH0KfQo=
+import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  buildSeoDescription,
+  buildSlugFromPostId,
+  buildTitleFromCaption,
+  fetchPageVideos,
+  guessCategory,
+} from "@/lib/facebook-sync";
+import { geocodeFromCaption, isGeocodingEnabled } from "@/lib/geocoding";
+
+// app/api/sync-facebook/route.ts
+// Route Handler ที่ดึงคลิปวิดีโอล่าสุดจาก Facebook Page "รีวิวสุพรรณบุรี" มา
+// upsert เข้าตาราง reviews ของ Supabase อัตโนมัติ พร้อมเดาหมวดหมู่ + เขียน
+// คำอธิบายที่ฉีด keyword SEO/GEO ให้อัตโนมัติ
+//
+// เรียกใช้งานได้ 2 ทาง:
+//  1. Vercel Cron Job (ดู vercel.json) — Vercel จะแนบ header
+//     "Authorization: Bearer <CRON_SECRET>" มาให้เองอัตโนมัติทุกครั้งที่ยิงตามตาราง
+//  2. เรียกเองด้วยมือ (เทส/สั่งซิงก์ทันที) — เปิดลิงก์:
+//     https://<โดเมนเว็บ>/api/sync-facebook?secret=<CRON_SECRET>
+//
+// ตั้งใจให้ "insert เฉพาะโพสต์ใหม่ที่ยังไม่เคยดึงมา" เท่านั้น (เช็คจาก
+// facebook_post_id) และจะไม่แตะแถวที่เคยดึงมาแล้ว แม้ต้นทางจะแก้แคปชั่นทีหลัง
+// — ป้องกันไม่ให้ระบบไปเขียนทับ title/category ที่ทีมการตลาดแก้ไขเองในภายหลัง
+
+export const dynamic = "force-dynamic"; // ห้าม cache response ของ route นี้เด็ดขาด
+
+/** หน่วงระหว่างการยิง Geocoding แต่ละครั้ง — กันชน rate limit ของ Google Maps API */
+const GEOCODE_DELAY_MS = 200;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** แถวที่จะ insert ลงตาราง reviews — ประกาศ type ไว้ชัดๆ เพื่อให้เติมพิกัดทีหลังได้
+ *  (ถ้าปล่อยให้ TS infer จาก object literal ที่มี latitude: null มันจะล็อก type เป็น null) */
+interface ReviewInsertRow {
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  cover_image: string | null;
+  facebook_embed_url: string;
+  tiktok_embed_url: string | null;
+  google_map_embed_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  location_text: string | null;
+  facebook_post_id: string;
+  created_at: string;
+}
+
+function isAuthorized(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false; // ไม่ตั้งค่า secret ไว้ = ปิดไม่ให้ใครยิงได้เลย (fail safe)
+
+  const authHeader = request.headers.get("authorization");
+  if (authHeader === `Bearer ${secret}`) return true;
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("secret") === secret) return true;
+
+  return false;
+}
+
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const pageId = process.env.FB_PAGE_ID;
+  const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
+
+  if (!pageId || !accessToken) {
+    return NextResponse.json(
+      { error: "Missing FB_PAGE_ID or FB_PAGE_ACCESS_TOKEN environment variable" },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // 1) ดึงคลิปล่าสุด 10 รายการจาก Facebook Page
+    const videos = await fetchPageVideos(pageId, accessToken, 10);
+
+    if (videos.length === 0) {
+      return NextResponse.json({ fetched: 0, inserted: 0, skipped: 0, message: "ไม่พบวิดีโอบนเพจ" });
+    }
+
+    // 2) เช็คว่า post id ไหนเคยดึงมาแล้วบ้าง (กันซ้ำ + กันเขียนทับของที่แก้ไขเองแล้ว)
+    const postIds = videos.map((v) => v.id);
+    const { data: existingRows, error: existingError } = await supabaseAdmin
+      .from("reviews")
+      .select("facebook_post_id")
+      .in("facebook_post_id", postIds);
+
+    if (existingError) {
+      throw new Error(`ตรวจสอบโพสต์ที่มีอยู่แล้วไม่สำเร็จ: ${existingError.message}`);
+    }
+
+    const existingIds = new Set((existingRows ?? []).map((r) => r.facebook_post_id));
+    const newVideos = videos.filter((v) => !existingIds.has(v.id));
+
+    if (newVideos.length === 0) {
+      return NextResponse.json({
+        fetched: videos.length,
+        inserted: 0,
+        skipped: videos.length,
+        message: "ไม่มีคลิปใหม่ — ทุกคลิปเคยถูกดึงเข้าระบบแล้ว",
+      });
+    }
+
+    // 3) แปลงเป็นแถวสำหรับตาราง reviews พร้อมเดา category + เขียนคำอธิบาย SEO อัตโนมัติ
+    const rows: ReviewInsertRow[] = newVideos.map((video) => {
+      const caption = video.description ?? "";
+      return {
+        title: buildTitleFromCaption(video.description, video.id),
+        slug: buildSlugFromPostId(video.id),
+        description: buildSeoDescription(video.description),
+        category: guessCategory(caption),
+        cover_image: video.picture,
+        facebook_embed_url: video.permalink_url,
+        tiktok_embed_url: null,
+        google_map_embed_url: null,
+        latitude: null,
+        longitude: null,
+        location_text: null,
+        facebook_post_id: video.id,
+        created_at: video.created_time,
+      };
+    });
+
+    // 4) เติมพิกัดอัตโนมัติจากแคปชั่น (Geocoding) — best effort ล้วนๆ
+    // ถ้าไม่ได้ตั้ง GEOCODING_API_KEY ก็ข้ามทั้งก้อนไปเลย (ไม่เสียเวลาหน่วง 200ms ฟรีๆ)
+    // และถ้าตัวไหน geocode ไม่ผ่าน ก็ปล่อยให้ latitude/longitude เป็น null ตามเดิม
+    // — การซิงก์ต้อง "ไม่พังเด็ดขาด" เพราะเรื่องพิกัด
+    let geocodedCount = 0;
+
+    if (isGeocodingEnabled()) {
+      for (let i = 0; i < rows.length; i++) {
+        // หน่วงเฉพาะ "ระหว่าง" การยิงแต่ละครั้ง ไม่หน่วงก่อนตัวแรก/หลังตัวสุดท้าย
+        if (i > 0) await sleep(GEOCODE_DELAY_MS);
+
+        const geo = await geocodeFromCaption(newVideos[i].description);
+        if (!geo) continue;
+
+        rows[i].latitude = geo.lat;
+        rows[i].longitude = geo.lng;
+        rows[i].location_text = geo.locationText;
+        geocodedCount++;
+      }
+    }
+
+    const { error: insertError } = await supabaseAdmin.from("reviews").insert(rows);
+
+    if (insertError) {
+      throw new Error(`บันทึกลง Supabase ไม่สำเร็จ: ${insertError.message}`);
+    }
+
+    return NextResponse.json({
+      fetched: videos.length,
+      inserted: rows.length,
+      skipped: videos.length - rows.length,
+      insertedTitles: rows.map((r) => r.title),
+      geocodedCount,
+      note: !isGeocodingEnabled()
+        ? "รีวิวใหม่ยังไม่มีพิกัด (latitude/longitude) และ location_text — เข้าไปเพิ่มเองในตาราง Supabase เพื่อให้ Google Maps + Geo-SEO ทำงานเต็มรูปแบบ (หรือตั้งค่า GEOCODING_API_KEY เพื่อให้ระบบเติมพิกัดให้อัตโนมัติ)"
+        : `เติมพิกัดอัตโนมัติสำเร็จ ${geocodedCount}/${rows.length} รายการ — ที่เหลือ (ถ้ามี) ต้องเข้าไปเพิ่ม latitude/longitude เองในตาราง Supabase | หมายเหตุ: พิกัดจาก Geocoding เป็นระดับอำเภอ/จังหวัด ไม่ใช่หน้าร้านจริง แก้ให้แม่นได้ภายหลัง`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[sync-facebook]:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

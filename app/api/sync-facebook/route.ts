@@ -8,17 +8,16 @@ import {
   guessCategory,
 } from "@/lib/facebook-sync";
 import { geocodeFromCaption, isGeocodingEnabled } from "@/lib/geocoding";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 // app/api/sync-facebook/route.ts
 // Route Handler ที่ดึงคลิปวิดีโอล่าสุดจาก Facebook Page "รีวิวสุพรรณบุรี" มา
 // upsert เข้าตาราง reviews ของ Supabase อัตโนมัติ พร้อมเดาหมวดหมู่ + เขียน
 // คำอธิบายที่ฉีด keyword SEO/GEO ให้อัตโนมัติ
 //
-// เรียกใช้งานได้ 2 ทาง:
-//  1. Vercel Cron Job (ดู vercel.json) — Vercel จะแนบ header
-//     "Authorization: Bearer <CRON_SECRET>" มาให้เองอัตโนมัติทุกครั้งที่ยิงตามตาราง
-//  2. เรียกเองด้วยมือ (เทส/สั่งซิงก์ทันที) — เปิดลิงก์:
-//     https://<โดเมนเว็บ>/api/sync-facebook?secret=<CRON_SECRET>
+// เรียกใช้งานผ่าน Vercel Cron Job (ดู vercel.json) — Vercel จะแนบ header
+//     "Authorization: Bearer ***" มาให้เองอัตโนมัติทุกครั้งที่ยิงตามตาราง
+// ต้องส่ง Authorization header ที่ตรงกับ CRON_SECRET เท่านั้น
 //
 // ตั้งใจให้ "insert เฉพาะโพสต์ใหม่ที่ยังไม่เคยดึงมา" เท่านั้น (เช็คจาก
 // facebook_post_id) และจะไม่แตะแถวที่เคยดึงมาแล้ว แม้ต้นทางจะแก้แคปชั่นทีหลัง
@@ -49,21 +48,8 @@ interface ReviewInsertRow {
   created_at: string;
 }
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // ไม่ตั้งค่า secret ไว้ = ปิดไม่ให้ใครยิงได้เลย (fail safe)
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader === `Bearer ${secret}`) return true;
-
-  const url = new URL(request.url);
-  if (url.searchParams.get("secret") === secret) return true;
-
-  return false;
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

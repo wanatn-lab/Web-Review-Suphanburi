@@ -17,26 +17,64 @@ export interface FacebookVideo {
   picture: string | null;
 }
 
-interface FacebookVideosResponse {
-  data: FacebookVideo[];
+interface FacebookAttachment {
+  type?: string;
+  url?: string;
+  media?: {
+    type?: string;
+    image?: { src?: string; uri?: string };
+    source?: string;
+  };
+  subattachments?: { data?: FacebookAttachment[] };
+}
+
+interface FacebookPost {
+  id?: string;
+  message?: string;
+  permalink_url?: string;
+  created_time?: string;
+  attachments?: { data?: FacebookAttachment[] };
+}
+
+interface FacebookPostsResponse {
+  data?: FacebookPost[];
   error?: { message: string; type: string; code: number };
 }
 
-const GRAPH_API_VERSION = "v19.0";
+const GRAPH_API_VERSION = "v26.0";
+const POST_FIELDS =
+  "id,message,permalink_url,created_time,attachments{media,type,url,subattachments{media,type,url}}";
 
-/** ดึงคลิปวิดีโอล่าสุด `limit` รายการจาก Facebook Page */
+function isVideoAttachment(attachment: FacebookAttachment): boolean {
+  return attachment.type?.toLowerCase().startsWith("video") || attachment.media?.type?.toLowerCase() === "video";
+}
+
+function findVideoAttachment(attachments: FacebookAttachment[] | undefined): FacebookAttachment | undefined {
+  for (const attachment of attachments ?? []) {
+    if (isVideoAttachment(attachment)) return attachment;
+    const nested = findVideoAttachment(attachment.subattachments?.data);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
+function thumbnailFromAttachment(attachment: FacebookAttachment): string | null {
+  return attachment.media?.image?.src ?? attachment.media?.image?.uri ?? null;
+}
+
+/** ดึงโพสต์ของเพจแล้วคัดเฉพาะโพสต์ที่มีวิดีโอแนบ */
 export async function fetchPageVideos(
   pageId: string,
   accessToken: string,
   limit = 10
 ): Promise<FacebookVideo[]> {
-  const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${pageId}/videos`);
-  url.searchParams.set("fields", "id,description,permalink_url,created_time,picture");
+  const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${pageId}/posts`);
+  url.searchParams.set("fields", POST_FIELDS);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("access_token", accessToken);
 
   const res = await fetch(url.toString(), { cache: "no-store" });
-  const json = (await res.json()) as FacebookVideosResponse;
+  const json = (await res.json()) as FacebookPostsResponse;
 
   if (!res.ok || json.error) {
     throw new Error(
@@ -44,7 +82,18 @@ export async function fetchPageVideos(
     );
   }
 
-  return json.data ?? [];
+  return (json.data ?? []).flatMap((post) => {
+    if (!post.id || !post.created_time) return [];
+    const attachment = findVideoAttachment(post.attachments?.data);
+    if (!attachment) return [];
+    return [{
+      id: post.id,
+      description: post.message ?? null,
+      permalink_url: post.permalink_url ?? attachment.url ?? "",
+      created_time: post.created_time,
+      picture: thumbnailFromAttachment(attachment),
+    }];
+  });
 }
 
 // คำสำคัญไว้เดาหมวดหมู่จากแคปชั่น — เรียงลำดับตรวจก่อน-หลังตามความเจาะจง

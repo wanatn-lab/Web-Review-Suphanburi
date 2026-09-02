@@ -1,19 +1,19 @@
 import "server-only";
 
 // lib/facebook-sync.ts
-// ฟังก์ชันล้วน (pure functions) ที่ใช้โดย app/api/sync-facebook/route.ts:
-//  1. ดึงคลิปวิดีโอล่าสุดจาก Facebook Page ผ่าน Graph API
-//  2. เดาหมวดหมู่ (category) จากข้อความแคปชั่น
-//  3. แปลงแคปชั่นดิบให้เป็นชื่อเรื่อง + คำอธิบายที่ฉีด keyword SEO/GEO เข้าไป
-// แยกออกมาจาก route.ts เพื่อให้ทดสอบ/แก้ไข logic การ "เขียน SEO อัตโนมัติ"
-// ได้ง่ายๆ ในที่เดียว โดยไม่ต้องแตะเรื่อง auth/upsert ของ route handler
+// Pure functions used by app/api/sync-facebook/route.ts:
+//  1. fetch the latest video clips from a Facebook Page via the Graph API
+//  2. guess a category from the caption text
+//  3. turn the raw caption into a title + an SEO/GEO-keyword-injected description
+// Split out from route.ts so the "auto-generated SEO" logic can be tested and
+// tweaked in one place, without touching the route handler's auth/upsert code.
 
 export interface FacebookVideo {
   id: string;
   description: string | null;
   permalink_url: string;
   created_time: string;
-  /** thumbnail URL ของคลิป — Graph API คืนเป็น string ตรงๆ สำหรับ field นี้ */
+  /** clip thumbnail URL -- the Graph API returns this field as a plain string */
   picture: string | null;
 }
 
@@ -38,12 +38,22 @@ interface FacebookPost {
 
 interface FacebookPostsResponse {
   data?: FacebookPost[];
+  /** Facebook attaches paging.next when older posts remain -- followed when
+   *  the first page doesn't yield enough videos to satisfy `limit` (e.g. the
+   *  page mixes in a lot of photo posts) */
+  paging?: { next?: string };
   error?: { message: string; type: string; code: number };
 }
 
 const GRAPH_API_VERSION = "v26.0";
 const POST_FIELDS =
   "id,message,permalink_url,created_time,attachments{media,type,url,subattachments{media,type,url}}";
+
+/** cap on how many pages a single fetchPageVideos call will follow -- avoids
+ *  an unbounded loop against the Facebook API if a page has dozens of
+ *  photo/text posts in a row with no videos at all (in that extreme case
+ *  we accept getting fewer videos than `limit` rather than never stopping) */
+const MAX_PAGES = 5;
 
 function isVideoAttachment(attachment: FacebookAttachment): boolean {
   return attachment.type?.toLowerCase().startsWith("video") || attachment.media?.type?.toLowerCase() === "video";
@@ -62,42 +72,64 @@ function thumbnailFromAttachment(attachment: FacebookAttachment): string | null 
   return attachment.media?.image?.src ?? attachment.media?.image?.uri ?? null;
 }
 
-/** ดึงโพสต์ของเพจแล้วคัดเฉพาะโพสต์ที่มีวิดีโอแนบ */
+/**
+ * Fetches the page's posts and keeps only the ones with a video attached --
+ * if the first page (of `limit` posts) doesn't filter down to `limit` videos
+ * (e.g. the page has photo/text posts mixed in), automatically follows the
+ * next page (via Facebook's `paging.next`) until `limit` videos are
+ * collected, there are no more pages, or MAX_PAGES is hit -- whichever comes
+ * first.
+ */
 export async function fetchPageVideos(
   pageId: string,
   accessToken: string,
   limit = 10
 ): Promise<FacebookVideo[]> {
-  const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${pageId}/posts`);
-  url.searchParams.set("fields", POST_FIELDS);
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("access_token", accessToken);
+  const firstUrl = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${pageId}/posts`);
+  firstUrl.searchParams.set("fields", POST_FIELDS);
+  firstUrl.searchParams.set("limit", String(limit));
+  firstUrl.searchParams.set("access_token", accessToken);
 
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  const json = (await res.json()) as FacebookPostsResponse;
+  const videos: FacebookVideo[] = [];
+  let nextUrl: string | undefined = firstUrl.toString();
+  let pagesFetched = 0;
 
-  if (!res.ok || json.error) {
-    throw new Error(
-      `Facebook Graph API error: ${json.error?.message ?? res.statusText} (code: ${json.error?.code ?? res.status})`
-    );
+  while (nextUrl && videos.length < limit && pagesFetched < MAX_PAGES) {
+    const res = await fetch(nextUrl, { cache: "no-store" });
+    const json = (await res.json()) as FacebookPostsResponse;
+    pagesFetched++;
+
+    if (!res.ok || json.error) {
+      throw new Error(
+        `Facebook Graph API error: ${json.error?.message ?? res.statusText} (code: ${json.error?.code ?? res.status})`
+      );
+    }
+
+    for (const post of json.data ?? []) {
+      if (!post.id || !post.created_time) continue;
+      const attachment = findVideoAttachment(post.attachments?.data);
+      if (!attachment) continue;
+
+      videos.push({
+        id: post.id,
+        description: post.message ?? null,
+        permalink_url: post.permalink_url ?? attachment.url ?? "",
+        created_time: post.created_time,
+        picture: thumbnailFromAttachment(attachment),
+      });
+
+      if (videos.length >= limit) break;
+    }
+
+    nextUrl = json.paging?.next;
   }
 
-  return (json.data ?? []).flatMap((post) => {
-    if (!post.id || !post.created_time) return [];
-    const attachment = findVideoAttachment(post.attachments?.data);
-    if (!attachment) return [];
-    return [{
-      id: post.id,
-      description: post.message ?? null,
-      permalink_url: post.permalink_url ?? attachment.url ?? "",
-      created_time: post.created_time,
-      picture: thumbnailFromAttachment(attachment),
-    }];
-  });
+  return videos;
 }
 
-// คำสำคัญไว้เดาหมวดหมู่จากแคปชั่น — เรียงลำดับตรวจก่อน-หลังตามความเจาะจง
-// (เช็ค "ตลาด"/"ที่พัก"/"คาเฟ่" ก่อน เพราะเจาะจงกว่า "เที่ยว" ที่กว้างและชนกันบ่อย)
+// keywords used to guess a category from the caption -- checked in order
+// from most specific to least (check "market"/"stay"/"cafe" before the
+// broad "trip" keywords, which collide with them often)
 const CATEGORY_KEYWORDS: { category: string; keywords: string[] }[] = [
   { category: "market", keywords: ["ตลาด", "market"] },
   { category: "stay", keywords: ["ที่พัก", "รีสอร์ท", "resort", "โรงแรม", "hotel", "โฮมสเตย์", "homestay"] },
@@ -108,7 +140,7 @@ const CATEGORY_KEYWORDS: { category: string; keywords: string[] }[] = [
   },
 ];
 
-/** เดาหมวดหมู่จากแคปชั่น — ถ้าไม่เจอคำที่ตรงเลย fallback เป็น "food" (ร้านอาหาร) */
+/** guesses a category from the caption -- falls back to "food" if nothing matches */
 export function guessCategory(text: string): string {
   const lower = text.toLowerCase();
   for (const { category, keywords } of CATEGORY_KEYWORDS) {
@@ -119,7 +151,7 @@ export function guessCategory(text: string): string {
   return "food";
 }
 
-/** ตัด hashtag (#คำ) ทั้งหมด + ยุบขึ้นบรรทัดใหม่/ช่องว่างซ้ำให้เหลือช่องว่างเดียว */
+/** strips all hashtags (#word) and collapses newlines/repeated whitespace to a single space */
 function stripHashtagsAndCollapse(text: string): string {
   return text
     .replace(/#\S+/g, "")
@@ -127,7 +159,7 @@ function stripHashtagsAndCollapse(text: string): string {
     .trim();
 }
 
-/** สร้างชื่อเรื่องจากบรรทัดแรกของแคปชั่น (ตัดไม่เกิน 70 ตัวอักษร) */
+/** builds a title from the caption's first line (truncated to 70 chars) */
 export function buildTitleFromCaption(description: string | null, postId: string): string {
   const cleaned = description ? stripHashtagsAndCollapse(description) : "";
   if (!cleaned) return `คลิปรีวิวสุพรรณบุรี #${postId}`;
@@ -136,15 +168,16 @@ export function buildTitleFromCaption(description: string | null, postId: string
   return truncated;
 }
 
-/** สร้างคำอธิบาย SEO/GEO: เนื้อหาแคปชั่นที่ทำความสะอาดแล้ว + suffix keyword มาตรฐานของเว็บ */
+/** builds an SEO/GEO description: the cleaned caption + the site's standard keyword suffix */
 export function buildSeoDescription(description: string | null): string {
   const cleaned = description ? stripHashtagsAndCollapse(description) : "";
   const base = cleaned || "คลิปรีวิวจากเพจ Facebook รีวิวสุพรรณบุรี อัปเดตล่าสุดพร้อมพิกัดร้าน";
   return `${base} | ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี, รีวิวสุพรรณบุรี`;
 }
 
-/** สร้าง slug ที่ไม่ชนกันแน่นอน จาก Facebook post id (ภาษาไทยแปลงเป็น URL slug ตรงๆ ได้ไม่สวย
- *  เลยใช้ id เป็นหลัก — ชื่อเรื่อง/SEO title ยังเป็นภาษาไทยเต็มอยู่แล้วในคอลัมน์ title) */
+/** builds a slug guaranteed not to collide, from the Facebook post id (Thai
+ *  text doesn't convert into a nice URL slug directly, so the id is used
+ *  instead -- the title/SEO title column already keeps the full Thai text) */
 export function buildSlugFromPostId(postId: string): string {
   return `fb-${postId}`;
 }

@@ -9,29 +9,34 @@ import {
 } from "@/lib/facebook-sync";
 import { geocodeFromCaption, isGeocodingEnabled } from "@/lib/geocoding";
 import { isCronAuthorized } from "@/lib/cron-auth";
+import { getActiveToken } from "@/lib/facebook-token";
 
 // app/api/sync-facebook/route.ts
-// Route Handler ที่ดึงคลิปวิดีโอล่าสุดจาก Facebook Page "รีวิวสุพรรณบุรี" มา
-// upsert เข้าตาราง reviews ของ Supabase อัตโนมัติ พร้อมเดาหมวดหมู่ + เขียน
-// คำอธิบายที่ฉีด keyword SEO/GEO ให้อัตโนมัติ
+// Route Handler that pulls the latest video clips from the "reviewsuphanburi"
+// Facebook Page and upserts them into the Supabase `reviews` table
+// automatically, guessing a category and writing an SEO-keyword-injected
+// description along the way.
 //
-// เรียกใช้งานผ่าน Vercel Cron Job (ดู vercel.json) — Vercel จะแนบ header
-//     "Authorization: Bearer ***" มาให้เองอัตโนมัติทุกครั้งที่ยิงตามตาราง
-// ต้องส่ง Authorization header ที่ตรงกับ CRON_SECRET เท่านั้น
+// Called via a Vercel Cron Job (see vercel.json) -- Vercel attaches an
+//     "Authorization: Bearer ***" header automatically on every scheduled hit.
+// Only requests with an Authorization header matching CRON_SECRET are
+// accepted.
 //
-// ตั้งใจให้ "insert เฉพาะโพสต์ใหม่ที่ยังไม่เคยดึงมา" เท่านั้น (เช็คจาก
-// facebook_post_id) และจะไม่แตะแถวที่เคยดึงมาแล้ว แม้ต้นทางจะแก้แคปชั่นทีหลัง
-// — ป้องกันไม่ให้ระบบไปเขียนทับ title/category ที่ทีมการตลาดแก้ไขเองในภายหลัง
+// Designed to "only insert posts that were never pulled before" (checked via
+// facebook_post_id) and never touches a row that was already pulled, even if
+// the source caption changes later -- this stops the sync from overwriting a
+// title/category the marketing team edited by hand afterwards.
 
-export const dynamic = "force-dynamic"; // ห้าม cache response ของ route นี้เด็ดขาด
+export const dynamic = "force-dynamic"; // never cache this route's response
 
-/** หน่วงระหว่างการยิง Geocoding แต่ละครั้ง — กันชน rate limit ของ Google Maps API */
+/** delay between each Geocoding call -- avoids hitting Google Maps API rate limits */
 const GEOCODE_DELAY_MS = 200;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** แถวที่จะ insert ลงตาราง reviews — ประกาศ type ไว้ชัดๆ เพื่อให้เติมพิกัดทีหลังได้
- *  (ถ้าปล่อยให้ TS infer จาก object literal ที่มี latitude: null มันจะล็อก type เป็น null) */
+/** row shape to insert into the reviews table -- typed explicitly so the
+ *  coordinates can be filled in later (letting TS infer the type from an
+ *  object literal with latitude: null would lock the field's type to null) */
 interface ReviewInsertRow {
   title: string;
   slug: string;
@@ -54,26 +59,39 @@ export async function GET(request: Request) {
   }
 
   const pageId = process.env.FB_PAGE_ID;
-  const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
 
-  if (!pageId || !accessToken) {
-    return NextResponse.json(
-      { error: "Missing FB_PAGE_ID or FB_PAGE_ACCESS_TOKEN environment variable" },
-      { status: 500 }
-    );
+  if (!pageId) {
+    return NextResponse.json({ error: "Missing FB_PAGE_ID environment variable" }, { status: 500 });
   }
 
   try {
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1) ดึงคลิปล่าสุด 10 รายการจาก Facebook Page
+    // 0) Read the access token that is actually active right now -- always
+    // from the `facebook_tokens` Supabase table first (kept current by
+    // /api/refresh-facebook-token). Falls back to the FB_PAGE_ACCESS_TOKEN
+    // Vercel env var if that table has never been refreshed yet -- see
+    // lib/facebook-token.ts
+    const activeToken = await getActiveToken(supabaseAdmin, pageId, process.env.FB_PAGE_ACCESS_TOKEN);
+
+    if (!activeToken) {
+      return NextResponse.json(
+        { error: "Missing FB_PAGE_ACCESS_TOKEN environment variable and no token stored in Supabase" },
+        { status: 500 }
+      );
+    }
+
+    const accessToken = activeToken.accessToken;
+
+    // 1) Fetch the latest 10 clips from the Facebook Page
     const videos = await fetchPageVideos(pageId, accessToken, 10);
 
     if (videos.length === 0) {
-      return NextResponse.json({ fetched: 0, inserted: 0, skipped: 0, message: "ไม่พบวิดีโอบนเพจ" });
+      return NextResponse.json({ fetched: 0, inserted: 0, skipped: 0, message: "No videos found on the page" });
     }
 
-    // 2) เช็คว่า post id ไหนเคยดึงมาแล้วบ้าง (กันซ้ำ + กันเขียนทับของที่แก้ไขเองแล้ว)
+    // 2) Check which post ids have already been pulled before (dedup + avoid
+    // overwriting anything already manually edited)
     const postIds = videos.map((v) => v.id);
     const { data: existingRows, error: existingError } = await supabaseAdmin
       .from("reviews")
@@ -81,7 +99,7 @@ export async function GET(request: Request) {
       .in("facebook_post_id", postIds);
 
     if (existingError) {
-      throw new Error(`ตรวจสอบโพสต์ที่มีอยู่แล้วไม่สำเร็จ: ${existingError.message}`);
+      throw new Error(`Failed to check existing posts: ${existingError.message}`);
     }
 
     const existingIds = new Set((existingRows ?? []).map((r) => r.facebook_post_id));
@@ -92,11 +110,12 @@ export async function GET(request: Request) {
         fetched: videos.length,
         inserted: 0,
         skipped: videos.length,
-        message: "ไม่มีคลิปใหม่ — ทุกคลิปเคยถูกดึงเข้าระบบแล้ว",
+        message: "No new clips -- every clip has already been pulled in before",
       });
     }
 
-    // 3) แปลงเป็นแถวสำหรับตาราง reviews พร้อมเดา category + เขียนคำอธิบาย SEO อัตโนมัติ
+    // 3) Map to reviews table rows, guessing category + writing an
+    // auto-generated SEO description along the way
     const rows: ReviewInsertRow[] = newVideos.map((video) => {
       const caption = video.description ?? "";
       return {
@@ -116,15 +135,16 @@ export async function GET(request: Request) {
       };
     });
 
-    // 4) เติมพิกัดอัตโนมัติจากแคปชั่น (Geocoding) — best effort ล้วนๆ
-    // ถ้าไม่ได้ตั้ง GEOCODING_API_KEY ก็ข้ามทั้งก้อนไปเลย (ไม่เสียเวลาหน่วง 200ms ฟรีๆ)
-    // และถ้าตัวไหน geocode ไม่ผ่าน ก็ปล่อยให้ latitude/longitude เป็น null ตามเดิม
-    // — การซิงก์ต้อง "ไม่พังเด็ดขาด" เพราะเรื่องพิกัด
+    // 4) Fill in coordinates automatically from the caption (Geocoding) --
+    // strictly best effort. If GEOCODING_API_KEY isn't set, skip this whole
+    // block (no point paying the 200ms delay for nothing). If a specific one
+    // fails to geocode, just leave latitude/longitude as null -- the sync
+    // must never fail because of a coordinate lookup.
     let geocodedCount = 0;
 
     if (isGeocodingEnabled()) {
       for (let i = 0; i < rows.length; i++) {
-        // หน่วงเฉพาะ "ระหว่าง" การยิงแต่ละครั้ง ไม่หน่วงก่อนตัวแรก/หลังตัวสุดท้าย
+        // only delay *between* calls, not before the first or after the last
         if (i > 0) await sleep(GEOCODE_DELAY_MS);
 
         const geo = await geocodeFromCaption(newVideos[i].description);
@@ -140,7 +160,7 @@ export async function GET(request: Request) {
     const { error: insertError } = await supabaseAdmin.from("reviews").insert(rows);
 
     if (insertError) {
-      throw new Error(`บันทึกลง Supabase ไม่สำเร็จ: ${insertError.message}`);
+      throw new Error(`Failed to insert into Supabase: ${insertError.message}`);
     }
 
     return NextResponse.json({
@@ -150,8 +170,8 @@ export async function GET(request: Request) {
       insertedTitles: rows.map((r) => r.title),
       geocodedCount,
       note: !isGeocodingEnabled()
-        ? "รีวิวใหม่ยังไม่มีพิกัด (latitude/longitude) และ location_text — เข้าไปเพิ่มเองในตาราง Supabase เพื่อให้ Google Maps + Geo-SEO ทำงานเต็มรูปแบบ (หรือตั้งค่า GEOCODING_API_KEY เพื่อให้ระบบเติมพิกัดให้อัตโนมัติ)"
-        : `เติมพิกัดอัตโนมัติสำเร็จ ${geocodedCount}/${rows.length} รายการ — ที่เหลือ (ถ้ามี) ต้องเข้าไปเพิ่ม latitude/longitude เองในตาราง Supabase | หมายเหตุ: พิกัดจาก Geocoding เป็นระดับอำเภอ/จังหวัด ไม่ใช่หน้าร้านจริง แก้ให้แม่นได้ภายหลัง`,
+        ? "New reviews still have no coordinates (latitude/longitude) or location_text -- add them manually in the Supabase table for Google Maps + Geo-SEO to work fully (or set GEOCODING_API_KEY for the system to fill them in automatically)"
+        : `Auto-geocoded ${geocodedCount}/${rows.length} rows -- any remaining ones need latitude/longitude added manually in the Supabase table | Note: Geocoding coordinates are at district/province level, not the actual storefront -- can be corrected later`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

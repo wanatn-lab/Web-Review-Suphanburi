@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-อัปเดตล่าสุด: 1 กันยายน 2026
+อัปเดตล่าสุด: 5 กันยายน 2026
 
 ## ภาพรวมโปรเจกต์
 
@@ -41,11 +41,23 @@
 
 ถ้ายังไม่ได้ตั้ง 2 ตัวนี้: `/api/sync-facebook` ยังทำงานปกติเหมือนเดิมทุกอย่าง (อ่าน token จาก `FB_PAGE_ACCESS_TOKEN` เป็น fallback ต่อไป) แต่ `/api/refresh-facebook-token` จะตอบ 500 ทันที — ไม่กระทบ sync หลัก แค่ยังไม่มี auto-refresh เท่านั้น
 
+## Manual Content Entry
+
+- เพิ่มหน้า `/admin/manual-content` สำหรับเพิ่มรีวิวด้วยมือ โดยป้องกันด้วย `ADMIN_PASSWORD` และ session cookie แบบ `HttpOnly`, `SameSite=Strict` อายุ 8 ชั่วโมง
+- ใช้ตาราง `reviews` เดิมเท่านั้น: ร้านอาหารบันทึกเป็น `food`, สถานที่ท่องเที่ยวบันทึกเป็น `trip` เพื่อให้หน้าเดิมแสดงผลได้ทันทีโดยไม่แก้โค้ด frontend
+- เพิ่ม migration `supabase/007_add_review_source.sql`: คอลัมน์ `source` รับเฉพาะ `facebook_auto` และ `manual`; ค่าเริ่มต้นเป็น `facebook_auto` จึงไม่ต้องแก้ `/api/sync-facebook`
+- ฟอร์มรองรับชื่อสถานที่, เนื้อหารีวิว, ลิงก์ Facebook/อ้างอิง, URL รูปภาพตามวิธีเดิมของโปรเจกต์ และที่อยู่
+- ใช้ `lib/geocoding.ts` เติม `latitude`/`longitude` แบบ best-effort เมื่อมี `GEOCODING_API_KEY`
+- สร้าง slug อัตโนมัติและเติมคีย์เวิร์ด `Suphan Buri restaurants` หรือ `Suphan Buri attractions` ลงใน H1/title และ description ตามหมวดหมู่ โดยไม่ใส่ซ้ำหากผู้เขียนใส่ไว้แล้ว
+- หลังบันทึกจะ revalidate หน้าแรก, หน้าหมวดหมู่, หน้ารายละเอียด และ sitemap เพื่อให้ข้อมูลใหม่ขึ้นโดยเร็ว
+- ตรวจแล้ว `app/sitemap.ts` ดึงข้อมูลจาก `reviews` อัตโนมัติ และ `app/robots.ts` ชี้ไป `/sitemap.xml` อยู่แล้ว จึงไม่แก้สองไฟล์นี้
+- ต้องตั้ง `ADMIN_PASSWORD` ใน Vercel Environment Variables เท่านั้น ห้ามบันทึกค่าจริงลง git หรือไฟล์ `.env`
+
 ## ผลการตรวจสอบ (รอบล่าสุด)
 
 - `npx tsc --noEmit`: ผ่าน ไม่มี TypeScript error (ทั้งโปรเจกต์ รวมไฟล์ใหม่)
 - Unit tests (`node:test` ผ่าน `tsx`): **19/19 ผ่าน** (เดิม 7 + ใหม่ 12 — token refresh 9 ตัว, pagination 2 ตัว)
-- `npm run build`: ผ่าน (คอมไพล์สำเร็จ, มีทั้ง `/api/sync-facebook` และ `/api/refresh-facebook-token` ขึ้นเป็น dynamic route ถูกต้อง) — ใช้ Supabase placeholder เฉพาะ process เหมือนรอบก่อนๆ; ระหว่างตรวจ build ในแซนด์บ็อกซ์นี้เข้า fonts.googleapis.com ไม่ได้ (นโยบายเครือข่ายของแซนด์บ็อกซ์เอง ไม่เกี่ยวกับโค้ด) จึง mock font loader ชั่วคราวเฉพาะตอนตรวจสอบแล้ว revert คืนก่อน commit — ไม่มีการเปลี่ยนแปลงจริงใน `app/layout.tsx`
+- `npm run build`: ผ่าน (คอมไพล์สำเร็จ และ `/admin/manual-content` เป็น dynamic route) — ใช้ค่า Supabase/รหัสผ่าน placeholder เฉพาะ process และอนุญาตเครือข่ายสำหรับ Google Fonts; ไม่ได้สร้างไฟล์ `.env` หรือแก้ `app/layout.tsx`
 - `git diff --check`: ผ่าน
 - Secret scan บน diff ทั้งหมด (pattern `EAA…`, `sk_live`, `AIza…`, `ghp_…`, private key header): ไม่พบ
 - ไม่ได้แก้ `package.json` หรือ `package-lock.json`
@@ -57,9 +69,12 @@
 2. Merge เข้า `main`
 3. Apply migration `supabase/006_add_facebook_tokens.sql` ผ่าน Supabase SQL Editor (เหมือนที่เคยทำกับ migration 005)
 4. เพิ่ม `FB_APP_ID` และ `FB_APP_SECRET` ใน Vercel Environment Variables (ดูวิธีหาค่าด้านบน)
-5. Redeploy
-6. ทดสอบยิง `/api/refresh-facebook-token` ด้วย `Authorization: Bearer <CRON_SECRET>` เองสัก 1 ครั้ง เพื่อยืนยันว่า exchange กับ Facebook สำเร็จและมีแถวใหม่ในตาราง `facebook_tokens`
-7. ทดสอบ `/api/sync-facebook` อีกครั้งหลังจากนั้น เพื่อยืนยันว่ายังอ่าน token ได้ปกติ (คราวนี้จาก Supabase แทน env var โดยตรง)
+5. Apply migration `supabase/007_add_review_source.sql` ผ่าน Supabase SQL Editor
+6. ตั้ง `ADMIN_PASSWORD` ใน Vercel Environment Variables โดยใช้รหัสผ่านที่ยาวและคาดเดายาก
+7. Redeploy แล้วเปิด `/admin/manual-content` เพื่อทดสอบเพิ่มรีวิว 1 รายการ
+8. ตรวจว่ารายการใหม่เปิดได้ที่ `/reviews/<slug>` และปรากฏใน `/sitemap.xml`
+9. ทดสอบยิง `/api/refresh-facebook-token` ด้วย `Authorization: Bearer <CRON_SECRET>` เองสัก 1 ครั้ง เพื่อยืนยันว่า exchange กับ Facebook สำเร็จและมีแถวใหม่ในตาราง `facebook_tokens`
+10. ทดสอบ `/api/sync-facebook` อีกครั้งหลังจากนั้น เพื่อยืนยันว่ายังอ่าน token ได้ปกติ (คราวนี้จาก Supabase แทน env var โดยตรง)
 
 ## Environment variables ที่ระบบใช้งาน
 
@@ -69,6 +84,7 @@
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_PASSWORD` (ใหม่ — ความลับสำหรับหน้า Manual Content Entry)
 - `FB_PAGE_ID`
 - `FB_PAGE_ACCESS_TOKEN` (bootstrap เท่านั้น หลัง refresh ครั้งแรกระบบจะอ่านจาก Supabase แทน)
 - `FB_APP_ID` (ใหม่)

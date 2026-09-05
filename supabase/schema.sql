@@ -10,6 +10,8 @@ create table if not exists public.reviews (
   caption          text,              -- raw caption pulled from the Facebook post
   cover_image      text,
   category         text not null check (category in ('food','cafe','trip','stay','market')),
+  source           text not null default 'facebook_auto'
+                   check (source in ('facebook_auto','manual')),
   facebook_embed_url text,
   tiktok_embed_url text,
   location_name    text,              -- e.g. "อ.เมือง จ.สุพรรณบุรี"

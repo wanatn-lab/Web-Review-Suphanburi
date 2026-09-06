@@ -82,6 +82,7 @@ function isSupportedImageUrl(value: string | null): boolean {
     (hostname === "example.com" ||
       hostname.endsWith(".fbcdn.net") ||
       hostname.endsWith(".tiktokcdn.com") ||
+      hostname.endsWith(".tiktokcdn-us.com") ||
       hostname.endsWith(".muscdn.com"))
   );
 }

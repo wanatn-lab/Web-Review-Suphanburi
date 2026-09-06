@@ -18,8 +18,14 @@ import {
   MANUAL_CATEGORY_CONFIG,
 } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/facebook-manual-import";
 
 const ADMIN_PATH = "/admin/manual-content";
+
+export type FacebookImportState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; draft: FacebookImportDraft };
 
 function readRequiredText(formData: FormData, key: string, maxLength: number): string | null {
   const value = formData.get(key);
@@ -58,6 +64,28 @@ function isSupportedImageUrl(value: string | null): boolean {
 
 function isAuthenticated(): boolean {
   return isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+}
+
+export async function importFacebookDraft(
+  _previousState: FacebookImportState,
+  formData: FormData
+): Promise<FacebookImportState> {
+  if (!isAuthenticated()) {
+    return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
+  }
+
+  const facebookUrl = readRequiredText(formData, "facebook_url", 2_000);
+  if (!facebookUrl) {
+    return { status: "error", message: "กรุณาวางลิงก์ Facebook ก่อนดึงข้อมูล" };
+  }
+
+  try {
+    return { status: "success", draft: await importFacebookPostDraft(facebookUrl) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ดึงข้อมูลจาก Facebook ไม่สำเร็จ";
+    console.error("[manual-content] Facebook draft import failed:", message);
+    return { status: "error", message };
+  }
 }
 
 export async function loginAdmin(formData: FormData) {
@@ -170,4 +198,66 @@ export async function createManualReview(formData: FormData) {
   revalidatePath("/sitemap.xml");
 
   redirect(`${ADMIN_PATH}?created=${encodeURIComponent(inserted.slug)}`);
+}
+
+export async function updateManualReview(formData: FormData) {
+  if (!isAuthenticated()) {
+    redirect(`${ADMIN_PATH}?error=session`);
+  }
+
+  const originalSlug = readRequiredText(formData, "original_slug", 180);
+  const rawCategory = formData.get("category");
+  const category = typeof rawCategory === "string" ? rawCategory : "";
+  const placeName = readRequiredText(formData, "place_name", 160);
+  const reviewContent = readRequiredText(formData, "review_content", 6000);
+  const address = readRequiredText(formData, "address", 500);
+  const referenceUrl = readOptionalUrl(formData, "reference_url");
+  const imageUrl = readOptionalUrl(formData, "image_url");
+
+  if (
+    !originalSlug ||
+    !isManualContentCategory(category) ||
+    !placeName ||
+    !reviewContent ||
+    !address ||
+    referenceUrl === undefined ||
+    imageUrl === undefined ||
+    !isSupportedImageUrl(imageUrl)
+  ) {
+    redirect(`${ADMIN_PATH}?edit=${encodeURIComponent(originalSlug ?? "")}&error=validation`);
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const seo = createManualSeoContent(category, placeName, reviewContent);
+  const categoryConfig = MANUAL_CATEGORY_CONFIG[category];
+  const coordinates = await geocodeLocation(address);
+
+  const { data: updated, error: updateError } = await supabaseAdmin
+    .from("reviews")
+    .update({
+      title: seo.title,
+      description: seo.description,
+      category: categoryConfig.databaseCategory,
+      cover_image: imageUrl,
+      facebook_embed_url: referenceUrl,
+      latitude: coordinates?.lat ?? null,
+      longitude: coordinates?.lng ?? null,
+      location_text: address,
+    })
+    .eq("slug", originalSlug)
+    .eq("source", "manual")
+    .select("slug")
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    console.error("[manual-content] Failed to update review:", updateError?.message ?? "Review not found");
+    redirect(`${ADMIN_PATH}?edit=${encodeURIComponent(originalSlug)}&error=database`);
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/category/${categoryConfig.databaseCategory}`);
+  revalidatePath(`/reviews/${originalSlug}`);
+  revalidatePath("/sitemap.xml");
+
+  redirect(`${ADMIN_PATH}?updated=${encodeURIComponent(originalSlug)}`);
 }

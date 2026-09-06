@@ -6,9 +6,11 @@ import {
   createManualReview,
   importCaptionDraft,
   importFacebookDraft,
+  importTikTokDraft,
   updateManualReview,
   type CaptionImportState,
   type FacebookImportState,
+  type TikTokImportState,
 } from "./actions";
 
 type FormCategory = "restaurant" | "attraction";
@@ -32,6 +34,7 @@ interface ManualContentFormProps {
 
 const initialImportState: FacebookImportState = { status: "idle" };
 const initialCaptionImportState: CaptionImportState = { status: "idle" };
+const initialTikTokImportState: TikTokImportState = { status: "idle" };
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-[#DA3D0D] focus:ring-2 focus:ring-[#DA3D0D]/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50";
@@ -73,9 +76,23 @@ function CaptionSubmitButton() {
   );
 }
 
+function TikTokSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="mt-3 rounded-xl border border-[#111827] px-4 py-2 text-sm font-bold text-[#111827] transition hover:bg-white/70 disabled:cursor-wait disabled:opacity-60 dark:border-neutral-200 dark:text-neutral-100"
+    >
+      {pending ? "กำลังดึงข้อมูล..." : "ดึงข้อมูลเป็นฉบับร่าง"}
+    </button>
+  );
+}
+
 export function ManualContentForm({ initialReview }: ManualContentFormProps) {
   const [importState, importAction] = useFormState(importFacebookDraft, initialImportState);
   const [captionImportState, captionImportAction] = useFormState(importCaptionDraft, initialCaptionImportState);
+  const [tikTokImportState, tikTokImportAction] = useFormState(importTikTokDraft, initialTikTokImportState);
   const [values, setValues] = useState<FormValues>(initialReview ?? emptyValues());
   const isEditing = Boolean(initialReview);
 
@@ -104,6 +121,19 @@ export function ManualContentForm({ initialReview }: ManualContentFormProps) {
       address: captionImportState.draft.address,
     });
   }, [captionImportState]);
+
+  useEffect(() => {
+    if (tikTokImportState.status !== "success") return;
+
+    setValues({
+      category: tikTokImportState.draft.category,
+      placeName: tikTokImportState.draft.placeName,
+      reviewContent: tikTokImportState.draft.reviewContent,
+      referenceUrl: tikTokImportState.draft.referenceUrl,
+      imageUrl: tikTokImportState.draft.imageUrl,
+      address: tikTokImportState.draft.address,
+    });
+  }, [tikTokImportState]);
 
   function updateValue<Key extends keyof FormValues>(key: Key, value: FormValues[Key]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -140,6 +170,37 @@ export function ManualContentForm({ initialReview }: ManualContentFormProps) {
             {importState.status === "success" && (
               <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950/30 dark:text-green-100">
                 {importState.draft.notice}
+              </p>
+            )}
+          </section>
+
+          <section className="mt-4 rounded-2xl border border-neutral-300 bg-neutral-100 p-5 dark:border-neutral-700 dark:bg-neutral-900">
+            <h2 className="text-base font-extrabold">นำเข้าจาก TikTok</h2>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+              วางลิงก์วิดีโอ TikTok สาธารณะ ระบบจะดึงข้อความและรูปหน้าปกจาก TikTok มาเติมฟอร์มด้านล่างเป็นฉบับร่าง
+            </p>
+            <form action={tikTokImportAction} className="mt-3">
+              <label htmlFor="tiktok_url" className="text-sm font-semibold">ลิงก์ TikTok</label>
+              <input
+                id="tiktok_url"
+                name="tiktok_url"
+                type="url"
+                inputMode="url"
+                required
+                maxLength={2000}
+                placeholder="https://www.tiktok.com/@account/video/..."
+                className={inputClass}
+              />
+              <TikTokSubmitButton />
+            </form>
+            {tikTokImportState.status === "error" && (
+              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+                {tikTokImportState.message}
+              </p>
+            )}
+            {tikTokImportState.status === "success" && (
+              <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950/30 dark:text-green-100">
+                {tikTokImportState.draft.notice}
               </p>
             )}
           </section>

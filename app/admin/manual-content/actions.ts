@@ -19,6 +19,7 @@ import {
 } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/facebook-manual-import";
+import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manual-import";
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
 
@@ -28,6 +29,11 @@ export type FacebookImportState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | { status: "success"; draft: FacebookImportDraft };
+
+export type TikTokImportState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; draft: TikTokImportDraft };
 
 export interface CaptionDraft {
   category: "restaurant" | "attraction";
@@ -75,7 +81,8 @@ function isSupportedImageUrl(value: string | null): boolean {
     url.protocol === "https:" &&
     (hostname === "example.com" ||
       hostname.endsWith(".fbcdn.net") ||
-      hostname.endsWith(".tiktokcdn.com"))
+      hostname.endsWith(".tiktokcdn.com") ||
+      hostname.endsWith(".muscdn.com"))
   );
 }
 
@@ -114,6 +121,28 @@ export async function importFacebookDraft(
   } catch (error) {
     const message = error instanceof Error ? error.message : "ดึงข้อมูลจาก Facebook ไม่สำเร็จ";
     console.error("[manual-content] Facebook draft import failed:", message);
+    return { status: "error", message };
+  }
+}
+
+export async function importTikTokDraft(
+  _previousState: TikTokImportState,
+  formData: FormData
+): Promise<TikTokImportState> {
+  if (!isAuthenticated()) {
+    return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
+  }
+
+  const tiktokUrl = readRequiredText(formData, "tiktok_url", 2_000);
+  if (!tiktokUrl) {
+    return { status: "error", message: "กรุณาวางลิงก์ TikTok ก่อนดึงข้อมูล" };
+  }
+
+  try {
+    return { status: "success", draft: await importTikTokPostDraft(tiktokUrl) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ดึงข้อมูลจาก TikTok ไม่สำเร็จ";
+    console.error("[manual-content] TikTok draft import failed:", message);
     return { status: "error", message };
   }
 }

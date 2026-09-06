@@ -21,7 +21,8 @@ create table if not exists public.reviews (
   hashtags         text[],
   view_count       integer default 0,
   published_at     timestamptz default now(),
-  created_at       timestamptz default now()
+  created_at       timestamptz default now(),
+  deleted_at       timestamptz
 );
 
 create index if not exists reviews_category_idx on public.reviews (category);

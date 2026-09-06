@@ -39,16 +39,18 @@ export interface Review {
   /** เพิ่มจาก supabase/004_add_facebook_post_id.sql — กัน insert ซ้ำตอน sync จาก Facebook อัตโนมัติ */
   facebook_post_id: string | null;
   created_at: string;
+  deleted_at: string | null;
 }
 
 const REVIEW_COLUMNS =
-  "id, title, slug, description, category, cover_image, facebook_embed_url, tiktok_embed_url, google_map_embed_url, latitude, longitude, location_text, facebook_post_id, created_at";
+  "id, title, slug, description, category, cover_image, facebook_embed_url, tiktok_embed_url, google_map_embed_url, latitude, longitude, location_text, facebook_post_id, created_at, deleted_at";
 
 /** ดึงรีวิว 1 รายการจาก slug สำหรับหน้า Dynamic Route */
 export async function getReviewBySlug(slug: string): Promise<Review | null> {
   const { data, error } = await supabase
     .from("reviews")
     .select(REVIEW_COLUMNS)
+    .is("deleted_at", null)
     .eq("slug", slug)
     .maybeSingle();
 
@@ -65,6 +67,7 @@ export async function getAllReviews(limit = 24): Promise<Review[]> {
   const { data, error } = await supabase
     .from("reviews")
     .select(REVIEW_COLUMNS)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -81,6 +84,7 @@ export async function getReviewsByCategory(category: string, limit = 24): Promis
   const { data, error } = await supabase
     .from("reviews")
     .select(REVIEW_COLUMNS)
+    .is("deleted_at", null)
     .eq("category", category)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -102,6 +106,7 @@ export async function searchReviews(query: string, limit = 24): Promise<Review[]
   const { data, error } = await supabase
     .from("reviews")
     .select(REVIEW_COLUMNS)
+    .is("deleted_at", null)
     .or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`)
     .order("created_at", { ascending: false })
     .limit(limit);

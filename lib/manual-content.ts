@@ -2,19 +2,19 @@ export type ManualContentCategory = "restaurant" | "attraction";
 
 interface CategoryConfig {
   databaseCategory: "food" | "trip";
-  keyword: "Suphan Buri restaurants" | "Suphan Buri attractions";
+  keyword: "ร้านอาหารสุพรรณบุรี" | "ที่เที่ยวสุพรรณบุรี";
   thaiLabel: string;
 }
 
 export const MANUAL_CATEGORY_CONFIG: Record<ManualContentCategory, CategoryConfig> = {
   restaurant: {
     databaseCategory: "food",
-    keyword: "Suphan Buri restaurants",
+    keyword: "ร้านอาหารสุพรรณบุรี",
     thaiLabel: "ร้านอาหาร",
   },
   attraction: {
     databaseCategory: "trip",
-    keyword: "Suphan Buri attractions",
+    keyword: "ที่เที่ยวสุพรรณบุรี",
     thaiLabel: "สถานที่ท่องเที่ยว",
   },
 };

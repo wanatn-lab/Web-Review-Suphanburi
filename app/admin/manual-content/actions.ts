@@ -413,6 +413,7 @@ export async function updateManualReview(formData: FormData) {
       location_text: address,
     })
     .eq("slug", originalSlug)
+    .is("deleted_at", null)
     .select("slug")
     .maybeSingle();
 
@@ -427,4 +428,49 @@ export async function updateManualReview(formData: FormData) {
   revalidatePath("/sitemap.xml");
 
   redirect(`${ADMIN_PATH}?updated=${encodeURIComponent(originalSlug)}`);
+}
+
+
+export async function deleteManualReview(formData: FormData) {
+  if (!isAuthenticated()) {
+    redirect(`${ADMIN_PATH}?error=session`);
+  }
+
+  const originalSlug = readRequiredText(formData, "original_slug", 180);
+  const confirmDelete = formData.get("confirm_delete");
+
+  if (!originalSlug || confirmDelete !== "DELETE") {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("reviews")
+    .select("slug, category")
+    .eq("slug", originalSlug)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (existingError || !existing) {
+    console.error("[manual-content] Failed to find review for deletion:", existingError?.message ?? "Review not found");
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+
+  const { error: deleteError } = await supabaseAdmin
+    .from("reviews")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("slug", originalSlug)
+    .is("deleted_at", null);
+
+  if (deleteError) {
+    console.error("[manual-content] Failed to delete review:", deleteError.message);
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+
+  revalidatePath("/");
+  if (existing.category) revalidatePath(`/category/${existing.category}`);
+  revalidatePath(`/reviews/${originalSlug}`);
+  revalidatePath("/sitemap.xml");
+
+  redirect(`${ADMIN_PATH}?deleted=${encodeURIComponent(originalSlug)}`);
 }

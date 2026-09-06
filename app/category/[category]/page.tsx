@@ -21,6 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const label = CATEGORY_LABEL[params.category];
   return {
+    alternates: { canonical: `/category/${params.category}` },
     title: `${label}สุพรรณบุรี รวมรีวิวล่าสุด`,
     description: `รวมรีวิว${label}สุพรรณบุรี พร้อมคลิปวิดีโอจาก Facebook และ TikTok อัปเดตล่าสุด | ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี`,
   };

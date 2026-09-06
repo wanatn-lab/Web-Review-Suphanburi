@@ -16,7 +16,7 @@ import type { Review } from "@/lib/supabase";
 // z-index ต่ำสุด ให้คลิกตรงไหนของการ์ดก็เข้าเพจรีวิวได้ ส่วนปุ่ม "แชร์"/"Maps"
 // ถูกยกไปไว้ z-10 (สูงกว่า) จึงกดแยกจากลิงก์หลักได้โดยไม่ต้องพึ่ง JS พิเศษ
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
 function PlayBadge() {
   // ตำแหน่ง "มุมขวาบน" ให้ตรงกับ mockup ต้นแบบ (suphanburireviewhub_1.html:

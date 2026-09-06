@@ -10,6 +10,7 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { loginAdmin, loginAdminWithEmail, logoutAdmin } from "./actions";
 import { ManualContentForm, type EditableManualReview } from "./manual-content-form";
+import { DeleteReviewButton } from "./delete-review-button";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; edit?: string; error?: string };
+  searchParams: { created?: string; updated?: string; deleted?: string; edit?: string; error?: string };
 }
 
 interface ManualReviewListItem {
@@ -45,6 +46,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
     .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, location_text")
+    .is("deleted_at", null)
     .eq("slug", slug)
     .maybeSingle();
 
@@ -70,6 +72,7 @@ async function getRecentReviews(): Promise<ManualReviewListItem[]> {
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
     .select("slug, title, location_text")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -210,7 +213,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
           แก้ไขเรียบร้อยแล้ว — <Link href={`/reviews/${searchParams.updated}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
         </div>
       )}
-      {searchParams.edit && !editReview && (
+      {searchParams.deleted && (\n        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">\n          ลบออกจากหน้าเว็บแล้ว — ข้อมูลถูกเก็บไว้ในฐานข้อมูลเพื่อความปลอดภัย\n        </div>\n      )}\n      {searchParams.edit && !editReview && (
         <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           ไม่พบรายการ Manual ที่ต้องการแก้ไข
         </div>
@@ -249,9 +252,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
                   <p className="font-semibold">{review.title}</p>
                   <p className="mt-1 text-xs text-neutral-500">{review.location_text ?? "ไม่ระบุพื้นที่"}</p>
                 </div>
-                <Link href={`/admin/manual-content?edit=${encodeURIComponent(review.slug)}`} className="text-sm font-bold text-[#B62F08] underline">
-                  แก้ไข
-                </Link>
+                <div className="flex items-center gap-3">\n                  <Link href={`/admin/manual-content?edit=${encodeURIComponent(review.slug)}`} className="text-sm font-bold text-[#B62F08] underline">\n                    แก้ไข\n                  </Link>\n                  <DeleteReviewButton slug={review.slug} title={review.title} />\n                </div>
               </li>
             ))}
           </ul>

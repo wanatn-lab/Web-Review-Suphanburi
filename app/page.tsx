@@ -10,6 +10,7 @@ import ReviewCard from "@/components/review-card";
 // list on the first response, matching the approved UI 1:1.
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/" },
   title: "รวมรีวิวสุพรรณบุรี ที่เที่ยว ร้านอาหาร อัปเดตล่าสุด",
   description:
     "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok ครบทุกอำเภอ อัปเดตทุกสัปดาห์",

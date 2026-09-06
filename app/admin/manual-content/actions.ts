@@ -327,6 +327,9 @@ export async function updateManualReview(formData: FormData) {
   const coordinates = await geocodeLocation(address);
   const embedUrls = embedUrlsForReference(referenceUrl);
 
+  // หมายเหตุ: ไม่กรอง .eq("source", "manual") ตรงนี้ — ต้องแก้ไขรีวิวที่ระบบดึงจาก
+  // Facebook อัตโนมัติ (source: "facebook_auto") ได้ด้วย ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง
+  // (คอลัมน์ source เดิมของแถวจะไม่ถูกแตะต้อง ยังคงรู้ที่มาเดิมของข้อมูลอยู่)
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("reviews")
     .update({
@@ -341,7 +344,6 @@ export async function updateManualReview(formData: FormData) {
       location_text: address,
     })
     .eq("slug", originalSlug)
-    .eq("source", "manual")
     .select("slug")
     .maybeSingle();
 

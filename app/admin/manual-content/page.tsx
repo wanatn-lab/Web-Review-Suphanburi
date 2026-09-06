@@ -39,11 +39,12 @@ const errorMessages: Record<string, string> = {
 };
 
 async function getManualReview(slug: string): Promise<EditableManualReview | null> {
+  // ไม่กรอง source ตรงนี้ — รีวิวที่ดึงจาก Facebook อัตโนมัติ (source: "facebook_auto")
+  // ต้องแก้ไขได้จากหน้านี้เช่นกัน ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง (source: "manual")
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
     .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, location_text")
     .eq("slug", slug)
-    .eq("source", "manual")
     .maybeSingle();
 
   if (error || !data) {
@@ -62,16 +63,17 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
   };
 }
 
-async function getRecentManualReviews(): Promise<ManualReviewListItem[]> {
+async function getRecentReviews(): Promise<ManualReviewListItem[]> {
+  // แสดงรีวิวล่าสุดทุกแหล่งที่มา (ทั้งพิมพ์เพิ่มเองและดึงจาก Facebook อัตโนมัติ)
+  // เพื่อให้กดแก้ไขคลิปที่อัปโหลดไปแล้วได้จากหน้านี้จุดเดียว
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
     .select("slug, title, location_text")
-    .eq("source", "manual")
     .order("created_at", { ascending: false })
     .limit(20);
 
   if (error) {
-    console.error("[manual-content] Failed to load manual review list:", error.message);
+    console.error("[manual-content] Failed to load recent review list:", error.message);
     return [];
   }
 
@@ -127,7 +129,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
 
   const [editReview, recentReviews] = await Promise.all([
     searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
-    getRecentManualReviews(),
+    getRecentReviews(),
   ]);
 
   return (
@@ -173,9 +175,12 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
       <ManualContentForm initialReview={editReview} />
 
       <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
-        <h2 className="text-lg font-extrabold">รายการที่เพิ่มเองล่าสุด</h2>
+        <h2 className="text-lg font-extrabold">รีวิวล่าสุด (แก้ไขได้ทุกรายการ)</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          รวมทั้งรายการที่พิมพ์เพิ่มเองและรายการที่ระบบดึงจาก Facebook อัตโนมัติ
+        </p>
         {recentReviews.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">ยังไม่มีรายการ Manual</p>
+          <p className="mt-2 text-sm text-neutral-500">ยังไม่มีรีวิวในระบบ</p>
         ) : (
           <ul className="mt-3 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
             {recentReviews.map((review) => (

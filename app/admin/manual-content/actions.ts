@@ -13,6 +13,7 @@ import {
   isEmailAllowedAdmin,
 } from "@/lib/admin-auth";
 import { geocodeLocation } from "@/lib/geocoding";
+import { mirrorCoverImage } from "@/lib/cover-image-mirror";
 import {
   createManualSeoContent,
   isManualContentCategory,
@@ -79,13 +80,25 @@ function isSupportedImageUrl(value: string | null): boolean {
 
   const url = new URL(value);
   const hostname = url.hostname.toLowerCase();
+  // hostname ของ Supabase โปรเจกต์นี้ -> ต้องอนุญาตด้วย เพราะ mirrorCoverImage()
+  // จะเปลี่ยน cover_image ให้ชี้มาที่นี่หลังมิเรอร์ภาพสำเร็จ (ดู lib/cover-image-mirror.ts)
+  // ไม่งั้นตอนเปิดฟอร์ม "แก้ไข" รีวิวที่มิเรอร์ภาพไปแล้ว จะ validate ไม่ผ่านทันที
+  const ownSupabaseHostname = (() => {
+    try {
+      return process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname.toLowerCase() : null;
+    } catch {
+      return null;
+    }
+  })();
+
   return (
     url.protocol === "https:" &&
     (hostname === "example.com" ||
       hostname.endsWith(".fbcdn.net") ||
       hostname.endsWith(".tiktokcdn.com") ||
       hostname.endsWith(".tiktokcdn-us.com") ||
-      hostname.endsWith(".muscdn.com"))
+      hostname.endsWith(".muscdn.com") ||
+      (ownSupabaseHostname !== null && hostname === ownSupabaseHostname))
   );
 }
 
@@ -306,6 +319,10 @@ export async function createManualReview(formData: FormData) {
 
   const slug = existingSlug ? `${seo.slugBase}-${randomUUID().slice(0, 8)}` : seo.slugBase;
   const coordinates = await geocodeLocation(address);
+  // ดาวน์โหลดภาพปกจาก CDN ชั่วคราว (TikTok/Facebook) มาเก็บถาวรที่ Supabase Storage
+  // กันปัญหาลิงก์หมดอายุ (ดูรายละเอียดใน lib/cover-image-mirror.ts) — ถ้ามิเรอร์
+  // ไม่สำเร็จจะได้ imageUrl เดิมกลับมาแทน ไม่ทำให้บันทึกรีวิวล้มเหลว
+  const coverImage = await mirrorCoverImage(imageUrl, slug);
   const createdAt = new Date().toISOString();
 
   const { data: inserted, error: insertError } = await supabaseAdmin
@@ -315,7 +332,7 @@ export async function createManualReview(formData: FormData) {
       slug,
       description: seo.description,
       category: categoryConfig.databaseCategory,
-      cover_image: imageUrl,
+      cover_image: coverImage,
       facebook_embed_url: embedUrls.facebookEmbedUrl,
       tiktok_embed_url: embedUrls.tiktokEmbedUrl,
       google_map_embed_url: null,
@@ -374,6 +391,10 @@ export async function updateManualReview(formData: FormData) {
   const categoryConfig = MANUAL_CATEGORY_CONFIG[category];
   const coordinates = await geocodeLocation(address);
   const embedUrls = embedUrlsForReference(referenceUrl);
+  // ดาวน์โหลดภาพปกจาก CDN ชั่วคราวมาเก็บถาวรที่ Supabase Storage เหมือนตอนสร้าง —
+  // ถ้าเป็นภาพที่มิเรอร์ไว้แล้วจากรอบก่อน (ชี้มาที่ Storage ของเราเอง) จะข้ามการ
+  // ดาวน์โหลดซ้ำโดยอัตโนมัติ (ดู isOwnStorageUrl ใน lib/cover-image-mirror.ts)
+  const coverImage = await mirrorCoverImage(imageUrl, originalSlug);
 
   // หมายเหตุ: ไม่กรอง .eq("source", "manual") ตรงนี้ — ต้องแก้ไขรีวิวที่ระบบดึงจาก
   // Facebook อัตโนมัติ (source: "facebook_auto") ได้ด้วย ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง
@@ -384,7 +405,7 @@ export async function updateManualReview(formData: FormData) {
       title: seo.title,
       description: seo.description,
       category: categoryConfig.databaseCategory,
-      cover_image: imageUrl,
+      cover_image: coverImage,
       facebook_embed_url: embedUrls.facebookEmbedUrl,
       tiktok_embed_url: embedUrls.tiktokEmbedUrl,
       latitude: coordinates?.lat ?? null,

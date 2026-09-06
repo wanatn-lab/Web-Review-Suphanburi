@@ -5,6 +5,10 @@ const nextConfig = {
       { protocol: "https", hostname: "scontent*.xx.fbcdn.net" },
       { protocol: "https", hostname: "*.fbcdn.net" },
       { protocol: "https", hostname: "**.tiktokcdn.com" },
+      { protocol: "https", hostname: "**.tiktokcdn-us.com" },
+      { protocol: "https", hostname: "**.muscdn.com" },
+      // Supabase Storage — ภาพปกที่มิเรอร์มาเก็บถาวรไว้ (ดู lib/cover-image-mirror.ts)
+      { protocol: "https", hostname: "*.supabase.co" },
       { protocol: "https", hostname: "example.com" }, // TODO: เปลี่ยนเป็นโดเมนรูปจริงที่เก็บ cover_image
     ],
   },

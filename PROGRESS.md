@@ -47,6 +47,7 @@
 - ใช้ตาราง `reviews` เดิมเท่านั้น: ร้านอาหารบันทึกเป็น `food`, สถานที่ท่องเที่ยวบันทึกเป็น `trip` เพื่อให้หน้าเดิมแสดงผลได้ทันทีโดยไม่แก้โค้ด frontend
 - เพิ่ม migration `supabase/007_add_review_source.sql`: คอลัมน์ `source` รับเฉพาะ `facebook_auto` และ `manual`; ค่าเริ่มต้นเป็น `facebook_auto` จึงไม่ต้องแก้ `/api/sync-facebook`
 - ฟอร์มรองรับชื่อสถานที่, เนื้อหารีวิว, ลิงก์ Facebook/อ้างอิง, URL รูปภาพตามวิธีเดิมของโปรเจกต์ และที่อยู่
+- เพิ่มการวางลิงก์ Facebook เพื่อดึงคำบรรยายและรูปหน้าปกเป็นฉบับร่าง รวมถึงรายการสำหรับกลับมาแก้ไขเนื้อหา Manual ภายหลัง โดยต้องมี `FB_PAGE_ACCESS_TOKEN` ที่ใช้งานได้
 - ใช้ `lib/geocoding.ts` เติม `latitude`/`longitude` แบบ best-effort เมื่อมี `GEOCODING_API_KEY`
 - สร้าง slug อัตโนมัติและเติมคีย์เวิร์ด `Suphan Buri restaurants` หรือ `Suphan Buri attractions` ลงใน H1/title และ description ตามหมวดหมู่ โดยไม่ใส่ซ้ำหากผู้เขียนใส่ไว้แล้ว
 - หลังบันทึกจะ revalidate หน้าแรก, หน้าหมวดหมู่, หน้ารายละเอียด และ sitemap เพื่อให้ข้อมูลใหม่ขึ้นโดยเร็ว

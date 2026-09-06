@@ -6,7 +6,9 @@ import {
   isAdminConfigured,
   isAdminSessionValid,
 } from "@/lib/admin-auth";
-import { createManualReview, loginAdmin, logoutAdmin } from "./actions";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { loginAdmin, logoutAdmin } from "./actions";
+import { ManualContentForm, type EditableManualReview } from "./manual-content-form";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,13 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; error?: string };
+  searchParams: { created?: string; updated?: string; edit?: string; error?: string };
+}
+
+interface ManualReviewListItem {
+  slug: string;
+  title: string;
+  location_text: string | null;
 }
 
 const inputClass =
@@ -27,11 +35,50 @@ const errorMessages: Record<string, string> = {
   database: "บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ migration และการเชื่อมต่อ Supabase แล้วลองใหม่",
   login: "รหัสผ่านไม่ถูกต้อง",
   session: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง",
-  validation:
-    "กรุณากรอกข้อมูลที่จำเป็นให้ครบ ใช้ลิงก์ http/https และใช้ URL รูปจาก CDN ที่โปรเจกต์รองรับ",
+  validation: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ ใช้ลิงก์ http/https และใช้ URL รูปที่โปรเจกต์รองรับ",
 };
 
-export default function ManualContentAdminPage({ searchParams }: AdminPageProps) {
+async function getManualReview(slug: string): Promise<EditableManualReview | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("reviews")
+    .select("slug, title, description, category, cover_image, facebook_embed_url, location_text")
+    .eq("slug", slug)
+    .eq("source", "manual")
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("[manual-content] Failed to load review for editing:", error.message);
+    return null;
+  }
+
+  return {
+    slug: data.slug,
+    category: data.category === "trip" ? "attraction" : "restaurant",
+    placeName: data.title.replace(/ \| Suphan Buri (restaurants|attractions)$/i, ""),
+    reviewContent: data.description ?? "",
+    referenceUrl: data.facebook_embed_url ?? "",
+    imageUrl: data.cover_image ?? "",
+    address: data.location_text ?? "สุพรรณบุรี",
+  };
+}
+
+async function getRecentManualReviews(): Promise<ManualReviewListItem[]> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("reviews")
+    .select("slug, title, location_text")
+    .eq("source", "manual")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error("[manual-content] Failed to load manual review list:", error.message);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
   const authenticated = isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
   const configured = isAdminConfigured();
   const errorMessage = searchParams.error ? errorMessages[searchParams.error] : null;
@@ -54,9 +101,7 @@ export default function ManualContentAdminPage({ searchParams }: AdminPageProps)
           )}
 
           <form action={loginAdmin} className="mt-5">
-            <label htmlFor="password" className="text-sm font-semibold">
-              รหัสผ่านผู้ดูแล
-            </label>
+            <label htmlFor="password" className="text-sm font-semibold">รหัสผ่านผู้ดูแล</label>
             <input
               id="password"
               name="password"
@@ -80,78 +125,73 @@ export default function ManualContentAdminPage({ searchParams }: AdminPageProps)
     );
   }
 
+  const [editReview, recentReviews] = await Promise.all([
+    searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
+    getRecentManualReviews(),
+  ]);
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-[#DA3D0D]">Admin</p>
-          <h1 className="mt-1 text-2xl font-extrabold">เพิ่มเนื้อหาแบบ Manual</h1>
+          <h1 className="mt-1 text-2xl font-extrabold">{editReview ? "แก้ไขเนื้อหา" : "เพิ่มเนื้อหาจาก Facebook"}</h1>
           <p className="mt-2 text-sm text-neutral-500">
-            ระบบจะสร้าง slug, H1 และข้อมูล SEO ให้ตามหมวดหมู่โดยอัตโนมัติ
+            ระบบจะสร้าง slug, H1 และข้อมูล SEO/GEO ให้ตามหมวดหมู่โดยอัตโนมัติ คุณตรวจแก้ก่อนเผยแพร่ได้
           </p>
         </div>
         <form action={logoutAdmin}>
-          <button type="submit" className="text-sm font-semibold text-neutral-500 underline hover:text-neutral-900">
-            ออกจากระบบ
-          </button>
+          <button type="submit" className="text-sm font-semibold text-neutral-500 underline hover:text-neutral-900">ออกจากระบบ</button>
         </form>
       </div>
 
       {searchParams.created && (
         <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
-          บันทึกเรียบร้อยแล้ว — {" "}
-          <Link href={`/reviews/${searchParams.created}`} className="font-bold underline">
-            เปิดหน้ารีวิว
-          </Link>
+          บันทึกเรียบร้อยแล้ว — <Link href={`/reviews/${searchParams.created}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
+        </div>
+      )}
+      {searchParams.updated && (
+        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
+          แก้ไขเรียบร้อยแล้ว — <Link href={`/reviews/${searchParams.updated}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
+        </div>
+      )}
+      {searchParams.edit && !editReview && (
+        <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          ไม่พบรายการ Manual ที่ต้องการแก้ไข
         </div>
       )}
       {errorMessage && (
         <div className="mt-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{errorMessage}</div>
       )}
 
-      <form action={createManualReview} className="mt-6 space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <div>
-          <label htmlFor="category" className="text-sm font-semibold">หมวดหมู่</label>
-          <select id="category" name="category" required className={inputClass} defaultValue="restaurant">
-            <option value="restaurant">ร้านอาหาร (Restaurant)</option>
-            <option value="attraction">สถานที่ท่องเที่ยว (Attraction)</option>
-          </select>
-        </div>
+      {editReview && (
+        <Link href="/admin/manual-content" className="mt-6 inline-block text-sm font-semibold text-[#B62F08] underline">
+          เพิ่มรายการใหม่แทน
+        </Link>
+      )}
 
-        <div>
-          <label htmlFor="place_name" className="text-sm font-semibold">ชื่อสถานที่</label>
-          <input id="place_name" name="place_name" type="text" required maxLength={160} className={inputClass} />
-        </div>
+      <ManualContentForm initialReview={editReview} />
 
-        <div>
-          <label htmlFor="review_content" className="text-sm font-semibold">รายละเอียด / เนื้อหารีวิว</label>
-          <textarea id="review_content" name="review_content" required maxLength={6000} rows={8} className={inputClass} />
-          <p className="mt-1 text-xs text-neutral-500">ระบบจะเพิ่มคีย์เวิร์ดตามหมวดหมู่ให้อย่างเป็นธรรมชาติหนึ่งครั้ง</p>
-        </div>
-
-        <div>
-          <label htmlFor="reference_url" className="text-sm font-semibold">ลิงก์โพสต์ Facebook หรือลิงก์อ้างอิง</label>
-          <input id="reference_url" name="reference_url" type="url" inputMode="url" className={inputClass} placeholder="https://..." />
-        </div>
-
-        <div>
-          <label htmlFor="image_url" className="text-sm font-semibold">URL รูปภาพ</label>
-          <input id="image_url" name="image_url" type="url" inputMode="url" className={inputClass} placeholder="https://..." />
-          <p className="mt-1 text-xs text-neutral-500">
-            ใช้วิธี URL เดิมของโปรเจกต์ โดยรองรับ Facebook CDN และ TikTok CDN ที่ตั้งค่าไว้แล้ว
-          </p>
-        </div>
-
-        <div>
-          <label htmlFor="address" className="text-sm font-semibold">ที่อยู่</label>
-          <textarea id="address" name="address" required maxLength={500} rows={3} className={inputClass} />
-          <p className="mt-1 text-xs text-neutral-500">หากตั้งค่า GEOCODING_API_KEY ระบบจะเติมพิกัดให้อัตโนมัติ</p>
-        </div>
-
-        <button type="submit" className="w-full rounded-xl bg-[#DA3D0D] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]">
-          บันทึกและเผยแพร่
-        </button>
-      </form>
+      <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+        <h2 className="text-lg font-extrabold">รายการที่เพิ่มเองล่าสุด</h2>
+        {recentReviews.length === 0 ? (
+          <p className="mt-2 text-sm text-neutral-500">ยังไม่มีรายการ Manual</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+            {recentReviews.map((review) => (
+              <li key={review.slug} className="flex items-center justify-between gap-4 p-4">
+                <div>
+                  <p className="font-semibold">{review.title}</p>
+                  <p className="mt-1 text-xs text-neutral-500">{review.location_text ?? "ไม่ระบุพื้นที่"}</p>
+                </div>
+                <Link href={`/admin/manual-content?edit=${encodeURIComponent(review.slug)}`} className="text-sm font-bold text-[#B62F08] underline">
+                  แก้ไข
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

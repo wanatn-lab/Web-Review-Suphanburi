@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getReviewBySlug } from "@/lib/supabase";
 import { CATEGORY_LABEL } from "@/lib/categories";
+import { VideoPlayer } from "@/components/video-player";
 
 // app/reviews/[slug]/page.tsx
 // Review Detail Page — Server Component (SSR), Dynamic Route.
@@ -79,6 +80,21 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
   const hasGeo = review.latitude != null && review.longitude != null;
 
+  // โชว์วิดีโอ "ช่องทางเดียว" — เลือก Facebook ก่อนถ้ามี ไม่งั้นใช้ TikTok เพราะ
+  // ในทางปฏิบัติมีแค่ช่องทางเดียวที่ถูก sync/กรอกไว้อยู่แล้ว ต่อให้มีทั้งคู่ก็ไม่ต้อง
+  // โชว์ 2 กล่อง — ไม่มีวิดีโอเลยก็ไม่ต้องมีกล่อง placeholder หลอกๆ
+  const videoProvider: "facebook" | "tiktok" | null = review.facebook_embed_url
+    ? "facebook"
+    : review.tiktok_embed_url
+      ? "tiktok"
+      : null;
+  const videoUrl =
+    videoProvider === "facebook"
+      ? review.facebook_embed_url
+      : videoProvider === "tiktok"
+        ? review.tiktok_embed_url
+        : null;
+
   // ใช้ google_map_embed_url ที่เก็บไว้ก่อน ถ้าไม่มีค่อย fallback ไปสร้างจาก lat/lng
   const mapSrc =
     review.google_map_embed_url ??
@@ -140,6 +156,21 @@ export default async function ReviewDetailPage({ params }: PageProps) {
 
       <main>
         <article className="mx-auto max-w-2xl px-4 pb-10 pt-4 sm:px-8">
+          {/* วิดีโอรีวิวขึ้นก่อนเป็นอย่างแรก แบบเดียวกับเปิดคลิปสั้นบนมือถือ — แตะแล้ว
+              เต็มจอ คำอธิบายอยู่ด้านล่างสุดในโหมดเต็มจอด้วย ถ้าไม่มีวิดีโอเลยก็ไม่ต้อง
+              มีกล่องเปล่าๆ ให้เห็น (VideoPlayer คืน null เอง) */}
+          {videoProvider && videoUrl && (
+            <div className="pb-6">
+              <VideoPlayer
+                provider={videoProvider}
+                url={videoUrl}
+                title={review.title}
+                poster={review.cover_image}
+                description={review.description}
+              />
+            </div>
+          )}
+
           <header className="flex flex-col items-center gap-3 pb-5 text-center">
             <span className="inline-block rounded-md bg-[#FFE3D6] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[#B62F08]">
               {review.category ? `${CATEGORY_LABEL[review.category] ?? review.category}สุพรรณบุรี` : "รีวิวสุพรรณบุรี"}
@@ -161,12 +192,6 @@ export default async function ReviewDetailPage({ params }: PageProps) {
               {review.description}
             </p>
           )}
-
-          {/* วิดีโอรีวิว: Facebook + TikTok — ทั้งคู่ lazy-loaded ด้วย loading="lazy" */}
-          <div className="grid grid-cols-1 gap-5 pb-6 sm:grid-cols-2">
-            <VideoEmbed provider="facebook" url={review.facebook_embed_url} title={review.title} />
-            <VideoEmbed provider="tiktok" url={review.tiktok_embed_url} title={review.title} />
-          </div>
 
           {/* Geo-location signal: Google Maps embed, lazy-loaded */}
           {mapSrc && (
@@ -223,62 +248,5 @@ function PinIcon() {
   );
 }
 
-function buildEmbedSrc(provider: "facebook" | "tiktok", url: string): string | null {
-  if (provider === "facebook") {
-    const encoded = encodeURIComponent(url);
-    return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&autoplay=false`;
-  }
-  // TikTok: ดึง video id จาก URL แล้วต่อเป็น embed v2 (ไม่ต้องโหลด widget.js ที่หนัก)
-  const match = url.match(/video\/(\d+)/);
-  return match ? `https://www.tiktok.com/embed/v2/${match[1]}` : null;
-}
-
-function VideoEmbed({
-  provider,
-  url,
-  title,
-}: {
-  provider: "facebook" | "tiktok";
-  url: string | null;
-  title: string;
-}) {
-  const src = url ? buildEmbedSrc(provider, url) : null;
-  const label = provider === "facebook" ? "Facebook" : "TikTok";
-
-  // Edge case: ลิงก์ต้นทางไม่มี/พัง -> fallback UI แทน iframe ที่ว่างเปล่า
-  if (!src) {
-    return (
-      <div
-        role="img"
-        aria-label={`ไม่มีวิดีโอ ${label} สำหรับ ${title}`}
-        className="relative flex aspect-[9/16] w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-dashed border-neutral-300 bg-gradient-to-br from-neutral-100 to-[#FFE3D6] p-4 text-center dark:border-neutral-700 dark:from-neutral-800 dark:to-[#3C2013]"
-      >
-        <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#FF4B12]" fill="none" stroke="currentColor" strokeWidth={2}>
-          <polygon points="8,5 19,12 8,19" fill="currentColor" stroke="none" />
-        </svg>
-        <p className="text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-          ยังไม่มีวิดีโอจาก {label}
-          <br />
-          <span className="text-[0.65rem] text-neutral-400 dark:text-neutral-500">
-            ลิงก์ต้นทางอาจถูกลบหรือเปลี่ยนแปลง
-          </span>
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative aspect-[9/16] w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg">
-      <iframe
-        key={src}
-        src={src}
-        title={`วิดีโอรีวิว (${label}): ${title}`}
-        loading="lazy"
-        className="absolute inset-0 h-full w-full border-0"
-        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
-      />
-    </div>
-  );
-}
+// วิดีโอ (poster + เต็มจอเมื่อคลิก) ย้ายไปเป็น components/video-player.tsx
+// ("use client") เพราะต้องใช้ useState/useEffect คุมการเปิด/ปิด modal

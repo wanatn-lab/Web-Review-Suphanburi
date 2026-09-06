@@ -15,7 +15,7 @@ import { VideoPlayer } from "@/components/video-player";
 // `params.slug` below to `const { slug } = await params;` if you're on 15.
 // This file targets the Next.js 14 App Router baseline.
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 
 // revalidate = 60: กันปัญหาหน้า static ค้างข้อมูลเก่า (ดูคำอธิบายเต็มใน app/page.tsx)

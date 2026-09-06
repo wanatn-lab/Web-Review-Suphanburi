@@ -173,9 +173,7 @@ export async function importFacebookPostDraft(rawUrl: string): Promise<FacebookI
     }
 
     throw new Error(
-      payload.error?.message
-        ? `Facebook ไม่อนุญาตให้ดึงโพสต์นี้: ${payload.error.message}`
-        : "Facebook ไม่อนุญาตให้ดึงโพสต์นี้"
+      "Facebook ยังไม่อนุญาตให้ token ของเพจอ่านโพสต์หรือ Reel นี้ กรุณาต่ออายุ FB_PAGE_ACCESS_TOKEN ที่มีสิทธิ์อ่านเนื้อหาเพจ แล้วลองใหม่"
     );
   }
 

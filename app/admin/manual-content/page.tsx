@@ -213,7 +213,12 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
           แก้ไขเรียบร้อยแล้ว — <Link href={`/reviews/${searchParams.updated}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
         </div>
       )}
-      {searchParams.deleted && (\n        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">\n          ลบออกจากหน้าเว็บแล้ว — ข้อมูลถูกเก็บไว้ในฐานข้อมูลเพื่อความปลอดภัย\n        </div>\n      )}\n      {searchParams.edit && !editReview && (
+      {searchParams.deleted && (
+        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
+          ลบออกจากหน้าเว็บแล้ว — ข้อมูลถูกเก็บไว้ในฐานข้อมูลเพื่อความปลอดภัย
+        </div>
+      )}
+      {searchParams.edit && !editReview && (
         <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           ไม่พบรายการ Manual ที่ต้องการแก้ไข
         </div>
@@ -252,7 +257,12 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
                   <p className="font-semibold">{review.title}</p>
                   <p className="mt-1 text-xs text-neutral-500">{review.location_text ?? "ไม่ระบุพื้นที่"}</p>
                 </div>
-                <div className="flex items-center gap-3">\n                  <Link href={`/admin/manual-content?edit=${encodeURIComponent(review.slug)}`} className="text-sm font-bold text-[#B62F08] underline">\n                    แก้ไข\n                  </Link>\n                  <DeleteReviewButton slug={review.slug} title={review.title} />\n                </div>
+                <div className="flex items-center gap-3">
+                  <Link href={`/admin/manual-content?edit=${encodeURIComponent(review.slug)}`} className="text-sm font-bold text-[#B62F08] underline">
+                    แก้ไข
+                  </Link>
+                  <DeleteReviewButton slug={review.slug} title={review.title} />
+                </div>
               </li>
             ))}
           </ul>

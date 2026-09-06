@@ -2,15 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  ADMIN_SESSION_COOKIE,
-  ADMIN_SESSION_MAX_AGE_SECONDS,
-  createAdminSessionToken,
-  isAdminPasswordValid,
-  isAdminSessionValid,
-} from "@/lib/admin-auth";
 import { geocodeLocation } from "@/lib/geocoding";
 import {
   createManualSeoContent,
@@ -22,6 +14,12 @@ import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/faceboo
 import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manual-import";
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
+import {
+  createServerSupabaseAuthClient,
+  getAllowedAdminEmails,
+  getAuthenticatedAdminEmail,
+  isAllowedAdminEmail,
+} from "@/lib/supabase-auth";
 
 const ADMIN_PATH = "/admin/manual-content";
 
@@ -100,15 +98,15 @@ function embedUrlsForReference(referenceUrl: string | null) {
     : { facebookEmbedUrl: referenceUrl, tiktokEmbedUrl: null };
 }
 
-function isAuthenticated(): boolean {
-  return isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+async function isAuthenticated(): Promise<boolean> {
+  return (await getAuthenticatedAdminEmail()) !== null;
 }
 
 export async function importFacebookDraft(
   _previousState: FacebookImportState,
   formData: FormData
 ): Promise<FacebookImportState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
   }
 
@@ -130,7 +128,7 @@ export async function importTikTokDraft(
   _previousState: TikTokImportState,
   formData: FormData
 ): Promise<TikTokImportState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
   }
 
@@ -153,7 +151,7 @@ export async function importCaptionDraft(
   _previousState: CaptionImportState,
   formData: FormData
 ): Promise<CaptionImportState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
   }
 
@@ -182,41 +180,45 @@ export async function importCaptionDraft(
 }
 
 export async function loginAdmin(formData: FormData) {
-  const password = formData.get("password");
+  const email = formData.get("email");
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
-  if (typeof password !== "string" || !isAdminPasswordValid(password)) {
-    redirect(`${ADMIN_PATH}?error=login`);
+  if (!normalizedEmail || !normalizedEmail.includes("@")) {
+    redirect(`${ADMIN_PATH}?error=auth-email`);
   }
 
-  const token = createAdminSessionToken();
-  if (!token) {
-    redirect(`${ADMIN_PATH}?error=config`);
+  if (getAllowedAdminEmails().length === 0) {
+    redirect(`${ADMIN_PATH}?error=auth-config`);
   }
 
-  cookies().set(ADMIN_SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/admin",
-    maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
+  if (!isAllowedAdminEmail(normalizedEmail)) {
+    redirect(`${ADMIN_PATH}?error=auth-unauthorized`);
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+  const callbackUrl = new URL("/auth/callback?next=/admin/manual-content", siteUrl).toString();
+  const supabase = createServerSupabaseAuthClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
+    options: { emailRedirectTo: callbackUrl },
   });
 
-  redirect(ADMIN_PATH);
+  if (error) {
+    console.error("[manual-content] Failed to send Magic Link:", error.message);
+    redirect(`${ADMIN_PATH}?error=auth-send`);
+  }
+
+  redirect(`${ADMIN_PATH}?sent=1`);
 }
 
 export async function logoutAdmin() {
-  cookies().set(ADMIN_SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/admin",
-    maxAge: 0,
-  });
+  const supabase = createServerSupabaseAuthClient();
+  await supabase.auth.signOut();
   redirect(ADMIN_PATH);
 }
 
 export async function createManualReview(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -295,7 +297,7 @@ export async function createManualReview(formData: FormData) {
 }
 
 export async function updateManualReview(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 

@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import {
-  ADMIN_SESSION_COOKIE,
-  isAdminConfigured,
-  isAdminSessionValid,
-} from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getAllowedAdminEmails, getAuthenticatedAdminEmail } from "@/lib/supabase-auth";
 import { loginAdmin, logoutAdmin } from "./actions";
 import { ManualContentForm, type EditableManualReview } from "./manual-content-form";
 
@@ -18,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; edit?: string; error?: string };
+  searchParams: { created?: string; updated?: string; edit?: string; error?: string; sent?: string };
 }
 
 interface ManualReviewListItem {
@@ -31,11 +26,14 @@ const inputClass =
   "mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-[#DA3D0D] focus:ring-2 focus:ring-[#DA3D0D]/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50";
 
 const errorMessages: Record<string, string> = {
-  config: "ยังไม่ได้ตั้งค่า ADMIN_PASSWORD ใน Environment Variables ของเซิร์ฟเวอร์",
   database: "บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ migration และการเชื่อมต่อ Supabase แล้วลองใหม่",
-  login: "รหัสผ่านไม่ถูกต้อง",
   session: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง",
   validation: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ ใช้ลิงก์ http/https และใช้ URL รูปที่โปรเจกต์รองรับ",
+  "auth-config": "ยังไม่ได้กำหนด ADMIN_EMAILS ใน Environment Variables ของเซิร์ฟเวอร์",
+  "auth-email": "กรุณากรอกอีเมลให้ถูกต้อง",
+  "auth-unauthorized": "อีเมลนี้ไม่ได้รับสิทธิ์เข้าหน้าจัดการเนื้อหา",
+  "auth-send": "ส่งลิงก์เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบการตั้งค่า Email ของ Supabase แล้วลองใหม่",
+  "auth-link": "ลิงก์เข้าสู่ระบบไม่ถูกต้อง หมดอายุ หรือถูกใช้งานแล้ว กรุณาขอลิงก์ใหม่",
 };
 
 async function getManualReview(slug: string): Promise<EditableManualReview | null> {
@@ -79,8 +77,9 @@ async function getRecentManualReviews(): Promise<ManualReviewListItem[]> {
 }
 
 export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
-  const authenticated = isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
-  const configured = isAdminConfigured();
+  const adminEmail = await getAuthenticatedAdminEmail();
+  const authenticated = adminEmail !== null;
+  const configured = getAllowedAdminEmails().length > 0;
   const errorMessage = searchParams.error ? errorMessages[searchParams.error] : null;
 
   if (!authenticated) {
@@ -89,25 +88,30 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         <section className="w-full rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
           <p className="text-xs font-bold uppercase tracking-wider text-[#DA3D0D]">Admin</p>
           <h1 className="mt-1 text-2xl font-extrabold">เข้าสู่ระบบจัดการเนื้อหา</h1>
-          <p className="mt-2 text-sm text-neutral-500">ใช้รหัสผ่านที่ตั้งไว้ในตัวแปร ADMIN_PASSWORD บนเซิร์ฟเวอร์</p>
+          <p className="mt-2 text-sm text-neutral-500">กรอกอีเมลผู้ดูแล แล้วเปิดลิงก์ยืนยันที่ส่งไปยังอีเมลนั้น</p>
 
           {!configured && (
             <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              ยังไม่ได้ตั้งค่า ADMIN_PASSWORD ระบบจึงปิดการเข้าสู่ระบบไว้
+              ยังไม่ได้ตั้งค่า ADMIN_EMAILS ระบบจึงปิดการเข้าสู่ระบบไว้
             </div>
           )}
           {errorMessage && (
             <div className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">{errorMessage}</div>
           )}
+          {searchParams.sent === "1" && (
+            <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+              ส่งลิงก์เข้าสู่ระบบแล้ว กรุณาเปิดอีเมลและกดลิงก์ภายใน 1 ชั่วโมง
+            </div>
+          )}
 
           <form action={loginAdmin} className="mt-5">
-            <label htmlFor="password" className="text-sm font-semibold">รหัสผ่านผู้ดูแล</label>
+            <label htmlFor="email" className="text-sm font-semibold">อีเมลผู้ดูแล</label>
             <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              maxLength={256}
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              maxLength={254}
               required
               disabled={!configured}
               className={inputClass}
@@ -117,7 +121,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
               disabled={!configured}
               className="mt-4 w-full rounded-xl bg-[#DA3D0D] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              เข้าสู่ระบบ
+              ส่งลิงก์เข้าสู่ระบบ
             </button>
           </form>
         </section>
@@ -134,7 +138,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#DA3D0D]">Admin</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#DA3D0D]">Admin · {adminEmail}</p>
           <h1 className="mt-1 text-2xl font-extrabold">{editReview ? "แก้ไขเนื้อหา" : "เพิ่มเนื้อหา"}</h1>
           <p className="mt-2 text-sm text-neutral-500">
             ระบบจะสร้าง slug, H1 และข้อมูล SEO/GEO ให้ตามหมวดหมู่โดยอัตโนมัติ คุณตรวจแก้ก่อนเผยแพร่ได้

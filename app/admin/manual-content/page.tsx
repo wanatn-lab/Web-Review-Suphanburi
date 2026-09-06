@@ -172,7 +172,14 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         </Link>
       )}
 
-      <ManualContentForm initialReview={editReview} />
+      {/*
+        key แยกตาม slug (หรือ "new" ตอนไม่ได้แก้ไข) — บังคับให้ React mount ฟอร์มใหม่ทุกครั้งที่
+        สลับรายการที่แก้ไข หรือสลับไปมาระหว่างโหมด "เพิ่มใหม่" กับ "แก้ไข" เพราะ ManualContentForm
+        เก็บค่าฟอร์มไว้ใน useState ของตัวเอง (initialReview ใช้แค่ตอน mount ครั้งแรกเท่านั้น) — ถ้าไม่มี
+        key ตัวนี้ การกดลิงก์ "แก้ไข" จากหน้าเดิม (Next.js client-side navigation ไม่ reload หน้า) จะทำให้
+        ฟอร์มค้างค่าง่างเดิม/ว่างเปล่า ดูเหมือนฟีเจอร์แก้ไขใช้งานไม่ได้ทั้งที่ข้อมูลจริงถูกโหลดมาแล้ว
+      */}
+      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} />
 
       <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
         <h2 className="text-lg font-extrabold">รีวิวล่าสุด (แก้ไขได้ทุกรายการ)</h2>

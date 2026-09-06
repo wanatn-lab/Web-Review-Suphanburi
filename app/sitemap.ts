@@ -5,7 +5,7 @@ import { CATEGORIES } from "@/lib/categories";
 // app/sitemap.ts — Next.js auto-serves this at /sitemap.xml
 // ดึงรีวิวทั้งหมดจาก Supabase มาขึ้น sitemap อัตโนมัติ ไม่ต้องอัปเดตมือ
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const reviews = await getAllReviews(500);

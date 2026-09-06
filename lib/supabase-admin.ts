@@ -11,7 +11,8 @@ import { createClient } from "@supabase/supabase-js";
 // เด็ดขาด — "server-only" ที่ import ไว้ด้านบนจะทำให้ build พังทันทีถ้ามีใคร
 // import ผิดที่ ป้องกัน service role key หลุดไปอยู่ใน JS bundle ที่ browser โหลดได้
 //
-// ใช้เฉพาะใน: app/api/sync-facebook/route.ts (Route Handler ฝั่งเซิร์ฟเวอร์เท่านั้น)
+// ใช้เฉพาะใน Route Handler / Server Action ฝั่งเซิร์ฟเวอร์ เช่น
+// app/api/sync-facebook/route.ts และ app/admin/manual-content/actions.ts
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
+import { buildTitleFromCaption, fetchPageVideos, guessCategory, type FacebookVideo } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
 import type { ManualContentCategory } from "@/lib/manual-content";
 
@@ -78,6 +78,52 @@ function trimCaption(caption: string): string {
   return caption.replace(/\s+/g, " ").trim();
 }
 
+function draftFromFacebookData({
+  caption,
+  id,
+  permalinkUrl,
+  imageUrl,
+  createdTime,
+}: {
+  caption: string;
+  id: string;
+  permalinkUrl: string;
+  imageUrl: string | null;
+  createdTime: string;
+}): FacebookImportDraft {
+  const category = guessCategory(caption) === "trip" ? "attraction" : "restaurant";
+  const location = extractLocationFromCaption(caption) ?? "สุพรรณบุรี";
+
+  return {
+    category,
+    placeName: buildTitleFromCaption(caption, id),
+    reviewContent: caption || "ยังไม่มีคำบรรยายจากโพสต์นี้ กรุณาเติมรายละเอียดก่อนเผยแพร่",
+    referenceUrl: permalinkUrl,
+    imageUrl: imageUrl ?? "",
+    address: location,
+    importedAt: createdTime,
+    notice:
+      "ดึงคำบรรยายและรูปหน้าปกจากโพสต์ Facebook แล้ว ระบบยังไม่ถอดเสียงหรือสรุปเนื้อหาภายในวิดีโออัตโนมัติ กรุณาตรวจแก้ก่อนเผยแพร่",
+  };
+}
+
+async function findVideoFromPageFeed(
+  pageId: string,
+  accessToken: string,
+  requestedId: string
+): Promise<FacebookVideo | null> {
+  try {
+    const recentVideos = await fetchPageVideos(pageId, accessToken, 50);
+    return (
+      recentVideos.find(
+        (video) => video.id.includes(requestedId) || video.permalink_url.includes(requestedId)
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Fetches public metadata for one Facebook post using a server-only Page token.
  * It never publishes; the caller receives an editable draft.
@@ -111,6 +157,21 @@ export async function importFacebookPostDraft(rawUrl: string): Promise<FacebookI
 
   const payload = (await response.json()) as FacebookGraphObject;
   if (!response.ok || payload.error) {
+    // Facebook Reels often reject a direct object lookup even when the same
+    // Page token can read the Page feed. Match only against recent Page videos
+    // to avoid ever importing a different public post by mistake.
+    const pageId = process.env.FB_PAGE_ID;
+    const fallbackVideo = pageId ? await findVideoFromPageFeed(pageId, accessToken, objectId) : null;
+    if (fallbackVideo) {
+      return draftFromFacebookData({
+        caption: trimCaption(fallbackVideo.description ?? ""),
+        id: fallbackVideo.id,
+        permalinkUrl: fallbackVideo.permalink_url || url.toString(),
+        imageUrl: fallbackVideo.picture,
+        createdTime: fallbackVideo.created_time,
+      });
+    }
+
     throw new Error(
       payload.error?.message
         ? `Facebook ไม่อนุญาตให้ดึงโพสต์นี้: ${payload.error.message}`
@@ -118,20 +179,11 @@ export async function importFacebookPostDraft(rawUrl: string): Promise<FacebookI
     );
   }
 
-  const caption = trimCaption(payload.message ?? payload.description ?? "");
-  const fallbackId = payload.id ?? objectId;
-  const category = guessCategory(caption) === "trip" ? "attraction" : "restaurant";
-  const location = extractLocationFromCaption(caption) ?? "สุพรรณบุรี";
-
-  return {
-    category,
-    placeName: buildTitleFromCaption(caption, fallbackId),
-    reviewContent: caption || "ยังไม่มีคำบรรยายจากโพสต์นี้ กรุณาเติมรายละเอียดก่อนเผยแพร่",
-    referenceUrl: payload.permalink_url ?? url.toString(),
-    imageUrl: payload.full_picture ?? findAttachmentImage(payload.attachments?.data) ?? "",
-    address: location,
-    importedAt: payload.created_time ?? new Date().toISOString(),
-    notice:
-      "ดึงคำบรรยายและรูปหน้าปกจากโพสต์ Facebook แล้ว ระบบยังไม่ถอดเสียงหรือสรุปเนื้อหาภายในวิดีโออัตโนมัติ กรุณาตรวจแก้ก่อนเผยแพร่",
-  };
+  return draftFromFacebookData({
+    caption: trimCaption(payload.message ?? payload.description ?? ""),
+    id: payload.id ?? objectId,
+    permalinkUrl: payload.permalink_url ?? url.toString(),
+    imageUrl: payload.full_picture ?? findAttachmentImage(payload.attachments?.data),
+    createdTime: payload.created_time ?? new Date().toISOString(),
+  });
 }

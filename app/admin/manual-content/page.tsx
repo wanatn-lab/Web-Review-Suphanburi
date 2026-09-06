@@ -41,7 +41,7 @@ const errorMessages: Record<string, string> = {
 async function getManualReview(slug: string): Promise<EditableManualReview | null> {
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
-    .select("slug, title, description, category, cover_image, facebook_embed_url, location_text")
+    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, location_text")
     .eq("slug", slug)
     .eq("source", "manual")
     .maybeSingle();
@@ -56,7 +56,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
     category: data.category === "trip" ? "attraction" : "restaurant",
     placeName: data.title.replace(/ \| Suphan Buri (restaurants|attractions)$/i, ""),
     reviewContent: data.description ?? "",
-    referenceUrl: data.facebook_embed_url ?? "",
+    referenceUrl: data.tiktok_embed_url ?? data.facebook_embed_url ?? "",
     imageUrl: data.cover_image ?? "",
     address: data.location_text ?? "สุพรรณบุรี",
   };
@@ -135,7 +135,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-[#DA3D0D]">Admin</p>
-          <h1 className="mt-1 text-2xl font-extrabold">{editReview ? "แก้ไขเนื้อหา" : "เพิ่มเนื้อหาจาก Facebook"}</h1>
+          <h1 className="mt-1 text-2xl font-extrabold">{editReview ? "แก้ไขเนื้อหา" : "เพิ่มเนื้อหา"}</h1>
           <p className="mt-2 text-sm text-neutral-500">
             ระบบจะสร้าง slug, H1 และข้อมูล SEO/GEO ให้ตามหมวดหมู่โดยอัตโนมัติ คุณตรวจแก้ก่อนเผยแพร่ได้
           </p>

@@ -19,6 +19,8 @@ import {
 } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/facebook-manual-import";
+import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
+import { extractLocationFromCaption } from "@/lib/geocoding";
 
 const ADMIN_PATH = "/admin/manual-content";
 
@@ -26,6 +28,21 @@ export type FacebookImportState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | { status: "success"; draft: FacebookImportDraft };
+
+export interface CaptionDraft {
+  category: "restaurant" | "attraction";
+  placeName: string;
+  reviewContent: string;
+  referenceUrl: string;
+  imageUrl: string;
+  address: string;
+  notice: string;
+}
+
+export type CaptionImportState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; draft: CaptionDraft };
 
 function readRequiredText(formData: FormData, key: string, maxLength: number): string | null {
   const value = formData.get(key);
@@ -62,6 +79,19 @@ function isSupportedImageUrl(value: string | null): boolean {
   );
 }
 
+function isTikTokUrl(value: string | null): boolean {
+  if (!value) return false;
+
+  const hostname = new URL(value).hostname.toLowerCase();
+  return hostname === "tiktok.com" || hostname.endsWith(".tiktok.com");
+}
+
+function embedUrlsForReference(referenceUrl: string | null) {
+  return isTikTokUrl(referenceUrl)
+    ? { facebookEmbedUrl: null, tiktokEmbedUrl: referenceUrl }
+    : { facebookEmbedUrl: referenceUrl, tiktokEmbedUrl: null };
+}
+
 function isAuthenticated(): boolean {
   return isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
 }
@@ -86,6 +116,39 @@ export async function importFacebookDraft(
     console.error("[manual-content] Facebook draft import failed:", message);
     return { status: "error", message };
   }
+}
+
+/** Builds an editable SEO/GEO draft from a caption the editor copied manually. */
+export async function importCaptionDraft(
+  _previousState: CaptionImportState,
+  formData: FormData
+): Promise<CaptionImportState> {
+  if (!isAuthenticated()) {
+    return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
+  }
+
+  const caption = readRequiredText(formData, "caption", 6_000);
+  const referenceUrl = readOptionalUrl(formData, "caption_reference_url");
+
+  if (!caption) {
+    return { status: "error", message: "กรุณาวางแคปชั่นก่อนสร้างฉบับร่าง" };
+  }
+  if (referenceUrl === undefined) {
+    return { status: "error", message: "ลิงก์อ้างอิงต้องเป็น URL แบบ http หรือ https" };
+  }
+
+  return {
+    status: "success",
+    draft: {
+      category: guessCategory(caption) === "trip" ? "attraction" : "restaurant",
+      placeName: buildTitleFromCaption(caption, "manual"),
+      reviewContent: caption,
+      referenceUrl: referenceUrl ?? "",
+      imageUrl: "",
+      address: extractLocationFromCaption(caption) ?? "สุพรรณบุรี",
+      notice: "สร้างฉบับร่างจากแคปชั่นแล้ว กรุณาตรวจชื่อสถานที่ หมวดหมู่ ที่อยู่ และเพิ่มรูปก่อนเผยแพร่",
+    },
+  };
 }
 
 export async function loginAdmin(formData: FormData) {
@@ -150,6 +213,7 @@ export async function createManualReview(formData: FormData) {
   const supabaseAdmin = getSupabaseAdmin();
   const seo = createManualSeoContent(category, placeName, reviewContent);
   const categoryConfig = MANUAL_CATEGORY_CONFIG[category];
+  const embedUrls = embedUrlsForReference(referenceUrl);
 
   const { data: existingSlug, error: slugError } = await supabaseAdmin
     .from("reviews")
@@ -174,8 +238,8 @@ export async function createManualReview(formData: FormData) {
       description: seo.description,
       category: categoryConfig.databaseCategory,
       cover_image: imageUrl,
-      facebook_embed_url: referenceUrl,
-      tiktok_embed_url: null,
+      facebook_embed_url: embedUrls.facebookEmbedUrl,
+      tiktok_embed_url: embedUrls.tiktokEmbedUrl,
       google_map_embed_url: null,
       latitude: coordinates?.lat ?? null,
       longitude: coordinates?.lng ?? null,
@@ -231,6 +295,7 @@ export async function updateManualReview(formData: FormData) {
   const seo = createManualSeoContent(category, placeName, reviewContent);
   const categoryConfig = MANUAL_CATEGORY_CONFIG[category];
   const coordinates = await geocodeLocation(address);
+  const embedUrls = embedUrlsForReference(referenceUrl);
 
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("reviews")
@@ -239,7 +304,8 @@ export async function updateManualReview(formData: FormData) {
       description: seo.description,
       category: categoryConfig.databaseCategory,
       cover_image: imageUrl,
-      facebook_embed_url: referenceUrl,
+      facebook_embed_url: embedUrls.facebookEmbedUrl,
+      tiktok_embed_url: embedUrls.tiktokEmbedUrl,
       latitude: coordinates?.lat ?? null,
       longitude: coordinates?.lng ?? null,
       location_text: address,

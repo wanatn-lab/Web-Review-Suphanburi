@@ -5,9 +5,10 @@ import {
   ADMIN_SESSION_COOKIE,
   isAdminConfigured,
   isAdminSessionValid,
+  isEmailLoginConfigured,
 } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { loginAdmin, logoutAdmin } from "./actions";
+import { loginAdmin, loginAdminWithEmail, logoutAdmin } from "./actions";
 import { ManualContentForm, type EditableManualReview } from "./manual-content-form";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ const inputClass =
 const errorMessages: Record<string, string> = {
   config: "ยังไม่ได้ตั้งค่า ADMIN_PASSWORD ใน Environment Variables ของเซิร์ฟเวอร์",
   database: "บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ migration และการเชื่อมต่อ Supabase แล้วลองใหม่",
-  login: "รหัสผ่านไม่ถูกต้อง",
+  login: "เข้าสู่ระบบไม่สำเร็จ ตรวจสอบรหัสผ่าน หรืออีเมล/รหัสผ่านอีกครั้ง",
   session: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง",
   validation: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ ใช้ลิงก์ http/https และใช้ URL รูปที่โปรเจกต์รองรับ",
 };
@@ -83,6 +84,7 @@ async function getRecentReviews(): Promise<ManualReviewListItem[]> {
 export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
   const authenticated = isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
   const configured = isAdminConfigured();
+  const emailLoginConfigured = isEmailLoginConfigured();
   const errorMessage = searchParams.error ? errorMessages[searchParams.error] : null;
 
   if (!authenticated) {
@@ -122,6 +124,57 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
               เข้าสู่ระบบ
             </button>
           </form>
+
+          {/*
+            แสดงฟอร์ม login ด้วยอีเมลเฉพาะตอนตั้งค่า ADMIN_ALLOWED_EMAILS ไว้แล้วเท่านั้น —
+            ก่อนตั้งค่า หน้านี้จะเหมือนเดิมทุกประการ ไม่มีอะไรเปลี่ยนสำหรับคนที่ยังใช้แค่
+            รหัสผ่านกลาง (ADMIN_PASSWORD) ตามปกติ
+          */}
+          {emailLoginConfigured && (
+            <>
+              <div className="mt-6 flex items-center gap-3">
+                <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+                <span className="text-xs font-semibold text-neutral-400">หรือ</span>
+                <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+              </div>
+
+              <form action={loginAdminWithEmail} className="mt-5 space-y-3">
+                <div>
+                  <label htmlFor="email" className="text-sm font-semibold">อีเมล</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    maxLength={256}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email_password" className="text-sm font-semibold">รหัสผ่าน</label>
+                  <input
+                    id="email_password"
+                    name="email_password"
+                    type="password"
+                    autoComplete="current-password"
+                    maxLength={256}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full rounded-xl border border-[#DA3D0D] px-4 py-3 text-sm font-bold text-[#DA3D0D] transition hover:bg-[#DA3D0D]/10"
+                >
+                  เข้าสู่ระบบด้วยอีเมล
+                </button>
+                <p className="text-xs text-neutral-500">
+                  ยังไม่มีรหัสผ่าน? ให้ผู้ดูแลระบบกด &quot;Invite user&quot; ในหน้า Supabase Dashboard ให้อีเมลนี้ก่อน ระบบจะส่งลิงก์ให้ตั้งรหัสผ่านเอง
+                </p>
+              </form>
+            </>
+          )}
         </section>
       </main>
     );

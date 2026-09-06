@@ -10,6 +10,7 @@ import {
   createAdminSessionToken,
   isAdminPasswordValid,
   isAdminSessionValid,
+  isEmailAllowedAdmin,
 } from "@/lib/admin-auth";
 import { geocodeLocation } from "@/lib/geocoding";
 import {
@@ -18,6 +19,7 @@ import {
   MANUAL_CATEGORY_CONFIG,
 } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { supabase } from "@/lib/supabase";
 import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/facebook-manual-import";
 import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manual-import";
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
@@ -212,6 +214,52 @@ export async function logoutAdmin() {
     path: "/admin",
     maxAge: 0,
   });
+  redirect(ADMIN_PATH);
+}
+
+// เข้าสู่ระบบด้วยอีเมล + รหัสผ่านที่ตั้งเอง (Supabase Auth) — ทางเลือกเสริมนอกจาก
+// รหัสผ่านกลาง (ADMIN_PASSWORD) เดิม ต้องผ่าน 2 ชั้น: (1) อีเมลต้องอยู่ใน
+// ADMIN_ALLOWED_EMAILS และ (2) Supabase Auth ต้องยืนยันรหัสผ่านถูกต้องจริง — ขาดชั้นใด
+// ชั้นหนึ่งไม่ผ่าน เพื่อกันทั้งคนนอก allowlist และกันกรณีมีคนอื่นสมัคร Supabase Auth
+// ด้วยอีเมลอื่นแล้วสวมสิทธิ์ ผลลัพธ์สุดท้ายใช้ ADMIN_SESSION_COOKIE ใบเดียวกับ
+// login รหัสผ่านกลาง จึงต้องมี ADMIN_PASSWORD ตั้งไว้เสมอ (ใช้เป็นกุญแจเซ็นเซสชัน)
+// แม้แอดมินคนนั้นจะ login ผ่านอีเมลก็ตาม
+export async function loginAdminWithEmail(formData: FormData) {
+  const emailValue = formData.get("email");
+  const passwordValue = formData.get("email_password");
+
+  if (typeof emailValue !== "string" || typeof passwordValue !== "string" || !passwordValue) {
+    redirect(`${ADMIN_PATH}?error=login`);
+  }
+
+  const email = emailValue.trim();
+  if (!email || !isEmailAllowedAdmin(email)) {
+    // ไม่บอกว่าติดที่ allowlist หรือรหัสผ่านผิด กันคนสุ่มไล่เดาว่าอีเมลไหนมีสิทธิ์แอดมิน
+    redirect(`${ADMIN_PATH}?error=login`);
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: passwordValue,
+  });
+
+  if (error || !data.user?.email || !isEmailAllowedAdmin(data.user.email)) {
+    redirect(`${ADMIN_PATH}?error=login`);
+  }
+
+  const token = createAdminSessionToken();
+  if (!token) {
+    redirect(`${ADMIN_PATH}?error=config`);
+  }
+
+  cookies().set(ADMIN_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/admin",
+    maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
+  });
+
   redirect(ADMIN_PATH);
 }
 

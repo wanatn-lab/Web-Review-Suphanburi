@@ -5,6 +5,7 @@
 // gets the fully-rendered HTML on the very first response, no client fetch.
 
 import { createClient } from "@supabase/supabase-js";
+import { resilientFetch } from "./supabase-fetch";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -17,6 +18,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { persistSession: false },
+  global: { fetch: resilientFetch },
 });
 
 export interface Review {

@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import { resilientFetch } from "./supabase-fetch";
 
 // lib/supabase-admin.ts
 // Supabase client "แอดมิน" — ใช้ SUPABASE_SERVICE_ROLE_KEY (ไม่มี "NEXT_PUBLIC_"
@@ -26,5 +27,6 @@ export function getSupabaseAdmin() {
 
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
+    global: { fetch: resilientFetch },
   });
 }

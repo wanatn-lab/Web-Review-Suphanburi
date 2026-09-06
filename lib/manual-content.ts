@@ -52,10 +52,15 @@ export function createManualSeoContent(
 }
 
 export function createSlug(value: string): string {
+  // Keep ASCII letters/numbers only. `\p{Letter}` also matches Thai script, and a
+  // Thai-character slug crashes Next.js's `revalidatePath`/internal header handling
+  // (HTTP header values must be Latin1/ByteString) — place names here are almost
+  // always Thai, so this reliably empties out to the category word, which is fine:
+  // callers already disambiguate collisions by appending a random suffix.
   const slug = value
-    .normalize("NFKC")
+    .normalize("NFKD")
     .toLowerCase()
-    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 120)
     .replace(/-+$/g, "");

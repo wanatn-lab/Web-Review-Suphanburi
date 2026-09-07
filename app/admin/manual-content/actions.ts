@@ -118,6 +118,16 @@ function embedUrlsForReference(referenceUrl: string | null) {
     : { facebookEmbedUrl: referenceUrl, tiktokEmbedUrl: null };
 }
 
+async function resolveCoverImage(imageUrl: string | null, referenceUrl: string | null): Promise<string | null> {
+  if (imageUrl || !isTikTokUrl(referenceUrl)) return imageUrl;
+  try {
+    return (await importTikTokPostDraft(referenceUrl)).imageUrl || null;
+  } catch (error) {
+    console.warn("[manual-content] TikTok cover import failed:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
 function isAuthenticated(): boolean {
   return isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
 }
@@ -237,45 +247,47 @@ export async function importCaptionDraft(
 // เพดานขนาดไฟล์อัปโหลด: กันไม่ให้ชนเพดาน request body ของ Server Actions บน
 // Vercel (ปรับไว้ที่ 25mb ใน next.config.js แล้ว) เผื่อระยะปลอดภัยไว้ด้วย
 const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+const TRANSCRIPTION_BUCKET = "review-media";
+const TRANSCRIPTION_PATH_PREFIX = "transcription/";
+export type TranscriptionUploadTicket = { status: "error"; message: string } | { status: "success"; path: string; token: string };
 
-/**
- * ถอดเสียงจากไฟล์วิดีโอที่ผู้ใช้อัปโหลดเอง (ใช้กับ TikTok เป็นหลัก เพราะ TikTok
- * ไม่มี API สาธารณะให้ดาวน์โหลดไฟล์วิดีโอโดยตรง — ต้องกด "บันทึกวิดีโอ" จาก
- * แอป TikTok เองก่อน แล้วอัปโหลดไฟล์เข้ามาที่นี่) ไม่บันทึกไฟล์ลงที่ไหน
- * ใช้แค่ถอดเสียงแล้วทิ้ง คืนข้อความให้ผู้ใช้กดแปะต่อในช่องเนื้อหารีวิวเอง
- */
-export async function transcribeUploadedVideo(
-  _previousState: TranscribeUploadState,
-  formData: FormData
-): Promise<TranscribeUploadState> {
-  if (!isAuthenticated()) {
-    return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
-  }
+function isSupportedMediaUpload(fileName: string, contentType: string): boolean {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return new Set(["mp4", "mov", "webm", "mp3", "m4a", "wav", "ogg", "aac"]).has(extension) && /^(video|audio)\//.test(contentType);
+}
 
-  const file = formData.get("video_file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { status: "error", message: "กรุณาเลือกไฟล์วิดีโอก่อน" };
+export async function prepareTranscriptionUpload(fileName: string, contentType: string, size: number): Promise<TranscriptionUploadTicket> {
+  if (!isAuthenticated()) return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
+  if (!Number.isFinite(size) || size <= 0 || size > MAX_UPLOAD_BYTES) return { status: "error", message: "ไฟล์ใหญ่เกินไป (จำกัดไม่เกิน 30MB)" };
+  if (!isSupportedMediaUpload(fileName, contentType)) return { status: "error", message: "รองรับ MP4, MOV, WebM, MP3, M4A, WAV, OGG และ AAC" };
+  const extension = fileName.split(".").pop()?.toLowerCase();
+  const path = `${TRANSCRIPTION_PATH_PREFIX}${randomUUID()}.${extension}`;
+  const { data, error } = await getSupabaseAdmin().storage.from(TRANSCRIPTION_BUCKET).createSignedUploadUrl(path);
+  if (error || !data) {
+    console.error("[manual-content] Failed to create upload URL:", error?.message);
+    return { status: "error", message: "เตรียมพื้นที่อัปโหลดไม่สำเร็จ กรุณาลองใหม่" };
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return { status: "error", message: "ไฟล์ใหญ่เกินไป (จำกัดไม่เกิน 30MB) กรุณาบีบอัดไฟล์ก่อนอัปโหลด" };
-  }
+  return { status: "success", path: data.path, token: data.token };
+}
 
+export async function transcribeStoredVideo(path: string): Promise<TranscribeUploadState> {
+  if (!isAuthenticated()) return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
+  if (!path.startsWith(TRANSCRIPTION_PATH_PREFIX) || !/^transcription\/[a-f0-9-]+\.(mp4|mov|webm|mp3|m4a|wav|ogg|aac)$/i.test(path)) return { status: "error", message: "ไฟล์สำหรับถอดเสียงไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่" };
+  const storage = getSupabaseAdmin().storage.from(TRANSCRIPTION_BUCKET);
   try {
-    const bytes = await file.arrayBuffer();
-    const transcript = await transcribeAudio(bytes);
-    if (!transcript) {
-      return {
-        status: "error",
-        message:
-          "ถอดเสียงไม่สำเร็จ — ตรวจว่าตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN แล้ว หรือคลิปนี้อาจไม่มีเสียงพูด",
-      };
-    }
-    return { status: "success", transcript };
+    const { data, error } = await storage.download(path);
+    if (error || !data) return { status: "error", message: "อ่านไฟล์ที่อัปโหลดไม่สำเร็จ กรุณาลองใหม่" };
+    const transcript = await transcribeAudio(await data.arrayBuffer());
+    return transcript ? { status: "success", transcript } : { status: "error", message: "ถอดเสียงไม่สำเร็จ — ตรวจ CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN หรือคลิปอาจไม่มีเสียงพูด" };
   } catch (error) {
-    console.error("[manual-content] transcribeUploadedVideo failed:", error instanceof Error ? error.message : error);
+    console.error("[manual-content] transcribeStoredVideo failed:", error instanceof Error ? error.message : error);
     return { status: "error", message: "เกิดข้อผิดพลาดระหว่างถอดเสียง กรุณาลองใหม่" };
+  } finally {
+    const { error } = await storage.remove([path]);
+    if (error) console.error("[manual-content] Failed to delete temporary media:", error.message);
   }
 }
+
 
 export async function loginAdmin(formData: FormData) {
   const password = formData.get("password");
@@ -410,7 +422,8 @@ export async function createManualReview(formData: FormData) {
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราว (TikTok/Facebook) มาเก็บถาวรที่ Supabase Storage
   // กันปัญหาลิงก์หมดอายุ (ดูรายละเอียดใน lib/cover-image-mirror.ts) — ถ้ามิเรอร์
   // ไม่สำเร็จจะได้ imageUrl เดิมกลับมาแทน ไม่ทำให้บันทึกรีวิวล้มเหลว
-  const coverImage = await mirrorCoverImage(imageUrl, slug);
+  const coverImage = await mirrorCoverImage(await resolveCoverImage(imageUrl, referenceUrl), slug);
+  if (!coverImage) redirect(`${ADMIN_PATH}?error=image`);
   const createdAt = new Date().toISOString();
 
   const { data: inserted, error: insertError } = await supabaseAdmin
@@ -485,7 +498,8 @@ export async function updateManualReview(formData: FormData) {
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราวมาเก็บถาวรที่ Supabase Storage เหมือนตอนสร้าง —
   // ถ้าเป็นภาพที่มิเรอร์ไว้แล้วจากรอบก่อน (ชี้มาที่ Storage ของเราเอง) จะข้ามการ
   // ดาวน์โหลดซ้ำโดยอัตโนมัติ (ดู isOwnStorageUrl ใน lib/cover-image-mirror.ts)
-  const coverImage = await mirrorCoverImage(imageUrl, originalSlug);
+  const coverImage = await mirrorCoverImage(await resolveCoverImage(imageUrl, referenceUrl), originalSlug);
+  if (!coverImage) redirect(`${ADMIN_PATH}?edit=${encodeURIComponent(originalSlug)}&error=image`);
 
   // หมายเหตุ: ไม่กรอง .eq("source", "manual") ตรงนี้ — ต้องแก้ไขรีวิวที่ระบบดึงจาก
   // Facebook อัตโนมัติ (source: "facebook_auto") ได้ด้วย ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง

@@ -24,6 +24,7 @@ import { extractLocationFromCaption } from "@/lib/geocoding";
 import { transcribeAudio } from "@/lib/audio-transcription";
 
 const ADMIN_PATH = "/admin/manual-content";
+const CATEGORY_ADMIN_PATH = "/admin/categories";
 
 export type FacebookImportState =
   | { status: "idle" }
@@ -558,7 +559,8 @@ export async function saveCategory(formData: FormData) {
   revalidatePath(`/category/${slug}`);
   revalidatePath("/sitemap.xml");
   revalidatePath(ADMIN_PATH);
-  redirect(`${ADMIN_PATH}?category=saved`);
+  revalidatePath(CATEGORY_ADMIN_PATH);
+  redirect(`${CATEGORY_ADMIN_PATH}?category=saved`);
 }
 
 

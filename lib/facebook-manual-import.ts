@@ -3,6 +3,7 @@ import "server-only";
 import { buildTitleFromCaption, fetchPageVideos, guessCategory, type FacebookVideo } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
 import type { ManualContentCategory } from "@/lib/manual-content";
+import { downloadMediaBytes, transcribeAudio } from "@/lib/audio-transcription";
 
 const GRAPH_API_VERSION = "v26.0";
 const GRAPH_FIELDS =
@@ -34,6 +35,9 @@ export interface FacebookImportDraft {
   address: string;
   importedAt: string;
   notice: string;
+  /** true when lib/audio-transcription.ts successfully transcribed the
+   *  clip's narration and it was folded into reviewContent below. */
+  transcribed: boolean;
 }
 
 function isFacebookUrl(value: string): URL | null {
@@ -78,32 +82,86 @@ function trimCaption(caption: string): string {
   return caption.replace(/\s+/g, " ").trim();
 }
 
-function draftFromFacebookData({
+/**
+ * Best-effort: asks the Graph API for this video's direct, downloadable file
+ * URL (the `source` field on a Video node), then downloads it and transcribes
+ * the narration via lib/audio-transcription.ts. Returns null on any failure
+ * -- a missing permission, an id that isn't a Video node, a download error,
+ * or Cloudflare credentials not being configured yet -- so the caller always
+ * has a safe path back to caption-only content.
+ *
+ * NEEDS LIVE VERIFICATION: this project's own comments elsewhere (see
+ * findVideoFromPageFeed below) note that Facebook Reels/videos don't always
+ * resolve at the same id used for the surrounding post -- so this may need
+ * to target a different id once a real FB_PAGE_ACCESS_TOKEN is available to
+ * test against. Until then this fails closed (returns null) rather than
+ * guessing, which only costs a missing transcript, never a broken import.
+ */
+async function tryTranscribeFacebookVideo(videoId: string, accessToken: string): Promise<string | null> {
+  try {
+    const sourceUrl = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${videoId}`);
+    sourceUrl.searchParams.set("fields", "source");
+    sourceUrl.searchParams.set("access_token", accessToken);
+
+    const response = await fetch(sourceUrl, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+    const payload = (await response.json().catch(() => null)) as { source?: string; error?: unknown } | null;
+    if (!response.ok || !payload?.source) return null;
+
+    const mediaBytes = await downloadMediaBytes(payload.source);
+    if (!mediaBytes) return null;
+
+    return await transcribeAudio(mediaBytes);
+  } catch (error) {
+    console.error(
+      "[facebook-manual-import] tryTranscribeFacebookVideo failed:",
+      error instanceof Error ? error.message : error
+    );
+    return null;
+  }
+}
+
+/** Combines the caption with a transcript (when one was produced) into a
+ *  single editable field, clearly separated so the human editor can tell
+ *  which part came from where before publishing. */
+function combineCaptionAndTranscript(caption: string, transcript: string | null): string {
+  if (!transcript) {
+    return caption || "ยังไม่มีคำบรรยายจากโพสต์นี้ กรุณาเติมรายละเอียดก่อนเผยแพร่";
+  }
+  const captionPart = caption || "(โพสต์นี้ไม่มีแคปชั่น)";
+  return `${captionPart}\n\n[ถอดเสียงจากคลิปอัตโนมัติ]\n${transcript}`;
+}
+
+async function draftFromFacebookData({
   caption,
   id,
   permalinkUrl,
   imageUrl,
   createdTime,
+  accessToken,
 }: {
   caption: string;
   id: string;
   permalinkUrl: string;
   imageUrl: string | null;
   createdTime: string;
-}): FacebookImportDraft {
+  accessToken: string;
+}): Promise<FacebookImportDraft> {
   const category = guessCategory(caption) === "trip" ? "attraction" : "restaurant";
   const location = extractLocationFromCaption(caption) ?? "สุพรรณบุรี";
+  const transcript = await tryTranscribeFacebookVideo(id, accessToken);
 
   return {
     category,
     placeName: buildTitleFromCaption(caption, id),
-    reviewContent: caption || "ยังไม่มีคำบรรยายจากโพสต์นี้ กรุณาเติมรายละเอียดก่อนเผยแพร่",
+    reviewContent: combineCaptionAndTranscript(caption, transcript),
     referenceUrl: permalinkUrl,
     imageUrl: imageUrl ?? "",
     address: location,
     importedAt: createdTime,
-    notice:
-      "ดึงคำบรรยายและรูปหน้าปกจากโพสต์ Facebook แล้ว ระบบยังไม่ถอดเสียงหรือสรุปเนื้อหาภายในวิดีโออัตโนมัติ กรุณาตรวจแก้ก่อนเผยแพร่",
+    transcribed: transcript !== null,
+    notice: transcript
+      ? "ดึงคำบรรยาย + ถอดเสียงจากคลิปแล้ว กรุณาตรวจแก้ก่อนเผยแพร่ (กด \"สร้างคำโปรย SEO ด้วย AI\" ด้านล่างเพื่อได้เนื้อหา SEO ที่ดีขึ้น)"
+      : "ดึงคำบรรยายและรูปหน้าปกจากโพสต์ Facebook แล้ว ระบบถอดเสียงคลิปไม่สำเร็จ (ยังไม่ได้ตั้งค่า Cloudflare หรือดึงไฟล์วิดีโอไม่ได้) กรุณาตรวจแก้ก่อนเผยแพร่",
   };
 }
 
@@ -169,6 +227,7 @@ export async function importFacebookPostDraft(rawUrl: string): Promise<FacebookI
         permalinkUrl: fallbackVideo.permalink_url || url.toString(),
         imageUrl: fallbackVideo.picture,
         createdTime: fallbackVideo.created_time,
+        accessToken,
       });
     }
 
@@ -183,5 +242,6 @@ export async function importFacebookPostDraft(rawUrl: string): Promise<FacebookI
     permalinkUrl: payload.permalink_url ?? url.toString(),
     imageUrl: payload.full_picture ?? findAttachmentImage(payload.attachments?.data),
     createdTime: payload.created_time ?? new Date().toISOString(),
+    accessToken,
   });
 }

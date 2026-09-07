@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // ค่าเริ่มต้นของ Next.js คือ 1mb ซึ่งเล็กเกินไปสำหรับ action
+    // transcribeUploadedVideo (app/admin/manual-content/actions.ts) ที่รับ
+    // ไฟล์วิดีโอสั้นๆ มาถอดเสียง — เพดานจริงบังคับอยู่แล้วในตัว action เอง
+    // (20MB) ค่านี้แค่ต้องไม่ต่ำกว่านั้น
+    serverActions: { bodySizeLimit: "25mb" },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "scontent*.xx.fbcdn.net" },

@@ -30,7 +30,7 @@ test("createSlug never returns an empty string", () => {
 
 test("createManualSeoContent always produces a ByteString-safe slugBase for Thai place names", () => {
   const seo = createManualSeoContent(
-    "restaurant",
+    { slug: "food", label: "ร้านอาหาร" },
     "ร้านก๋วยเตี๋ยวเรือลุงมี",
     "รีวิวร้านก๋วยเตี๋ยวเรือ น้ำซุปเข้มข้น เส้นนุ่ม ราคาย่อมเยา"
   );
@@ -42,7 +42,11 @@ test("createManualSeoContent always produces a ByteString-safe slugBase for Thai
 });
 
 test("createManualSeoContent produces a ByteString-safe slugBase for Thai attraction names", () => {
-  const seo = createManualSeoContent("attraction", "วัดป่าเลไลยก์วรวิหาร", "สถานที่ท่องเที่ยวเก่าแก่คู่เมืองสุพรรณบุรี");
+  const seo = createManualSeoContent(
+    { slug: "trip", label: "ที่เที่ยว" },
+    "วัดป่าเลไลยก์วรวิหาร",
+    "สถานที่ท่องเที่ยวเก่าแก่คู่เมืองสุพรรณบุรี"
+  );
 
   assert.equal(hasOnlyByteStringSafeChars(seo.slugBase), true);
   assert.equal(seo.slugBase, "trip");

@@ -47,6 +47,7 @@ const errorMessages: Record<string, string> = {
   login: "เข้าสู่ระบบไม่สำเร็จ ตรวจสอบรหัสผ่าน หรืออีเมล/รหัสผ่านอีกครั้ง",
   session: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง",
   validation: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ ใช้ลิงก์ http/https และใช้ URL รูปที่โปรเจกต์รองรับ",
+  image: "ยังหารูปปกจากลิงก์ TikTok ไม่ได้ กรุณาวาง URL รูปภาพก่อนบันทึก เพื่อไม่ให้การ์ดหน้าเว็บว่าง",
 };
 
 async function getManualReview(slug: string): Promise<EditableManualReview | null> {

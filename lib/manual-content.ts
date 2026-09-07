@@ -1,3 +1,5 @@
+export type ManualContentCategory = "restaurant" | "attraction";
+
 export interface ManualSeoCategory { slug: string; label: string; }
 
 function normalizeText(value: string): string { return value.trim().replace(/\s+/g, " "); }

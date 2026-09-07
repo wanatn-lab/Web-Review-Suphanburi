@@ -29,23 +29,6 @@ interface ManualReviewListItem {
   location_text: string | null;
 }
 
-interface ManagedCategory {
-  slug: string;
-  label: string;
-  seo_title: string | null;
-  seo_description: string | null;
-  sort_order: number;
-  is_active: boolean;
-}
-
-const fallbackCategories: ManagedCategory[] = [
-  { slug: "food", label: "ร้านอาหาร", seo_title: null, seo_description: null, sort_order: 10, is_active: true },
-  { slug: "cafe", label: "คาเฟ่", seo_title: null, seo_description: null, sort_order: 20, is_active: true },
-  { slug: "trip", label: "ที่เที่ยว", seo_title: null, seo_description: null, sort_order: 30, is_active: true },
-  { slug: "stay", label: "ที่พัก", seo_title: null, seo_description: null, sort_order: 40, is_active: true },
-  { slug: "market", label: "ตลาด", seo_title: null, seo_description: null, sort_order: 50, is_active: true },
-];
-
 const inputClass =
   "mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-[#DA3D0D] focus:ring-2 focus:ring-[#DA3D0D]/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50";
 
@@ -99,26 +82,6 @@ async function getRecentReviews(): Promise<ManualReviewListItem[]> {
   }
 
   return data ?? [];
-}
-
-async function getManagedCategories(): Promise<ManagedCategory[]> {
-  try {
-    const { data, error } = await getSupabaseAdmin()
-      .from("categories")
-      .select("slug, label, seo_title, seo_description, sort_order, is_active")
-      .order("sort_order", { ascending: true })
-      .order("label", { ascending: true });
-
-    if (error) {
-      console.error("[manual-content] Failed to load categories:", error.message);
-      return fallbackCategories;
-    }
-
-    return (data?.length ? data : fallbackCategories) as ManagedCategory[];
-  } catch (error) {
-    console.error("[manual-content] Category lookup failed:", error);
-    return fallbackCategories;
-  }
 }
 
 export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
@@ -220,10 +183,9 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
     );
   }
 
-  const [editReview, recentReviews, categories] = await Promise.all([
+  const [editReview, recentReviews] = await Promise.all([
     searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
     getRecentReviews(),
-    getManagedCategories(),
   ]);
 
   return (
@@ -283,11 +245,11 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         key ตัวนี้ การกดลิงก์ "แก้ไข" จากหน้าเดิม (Next.js client-side navigation ไม่ reload หน้า) จะทำให้
         ฟอร์มค้างค่าง่างเดิม/ว่างเปล่า ดูเหมือนฟีเจอร์แก้ไขใช้งานไม่ได้ทั้งที่ข้อมูลจริงถูกโหลดมาแล้ว
       */}
-      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} categories={categories} />
+      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} />
 
       <section className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
         <h2 className="text-lg font-extrabold">จัดการหมวดหมู่</h2>
-        <p className="mt-1 text-sm text-neutral-500">เพิ่ม ปรับชื่อ ลำดับ และ SEO ของหมวดหมู่ได้จากหน้าแยก เพื่อไม่ให้กระทบหน้าถอดเสียงและเพิ่มรีวิว</p>
+        <p className="mt-1 text-sm text-neutral-500">เพิ่มและแก้ไขหมวดหมู่จากหน้าแยก โดยไม่กระทบหน้าเพิ่มเนื้อหา</p>
         <Link href="/admin/categories" className="mt-3 inline-block rounded-xl border border-[#DA3D0D] px-4 py-2 text-sm font-bold text-[#B62F08] hover:bg-[#FFF2ED]">ไปจัดการหมวดหมู่</Link>
       </section>
 

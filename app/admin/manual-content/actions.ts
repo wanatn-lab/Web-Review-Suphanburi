@@ -134,6 +134,12 @@ function isCategorySlug(value: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && value.length <= 48;
 }
 
+function normalizeCategorySlug(value: string): string {
+  if (value === "restaurant") return "food";
+  if (value === "attraction") return "trip";
+  return value;
+}
+
 async function getActiveCategory(slug: string): Promise<ManualSeoCategory | null> {
   if (!isCategorySlug(slug)) return null;
   const { data, error } = await getSupabaseAdmin()
@@ -357,7 +363,7 @@ export async function createManualReview(formData: FormData) {
   }
 
   const rawCategory = formData.get("category");
-  const category = typeof rawCategory === "string" ? rawCategory : "";
+  const category = normalizeCategorySlug(typeof rawCategory === "string" ? rawCategory : "");
   const placeName = readRequiredText(formData, "place_name", 160);
   const reviewContent = readRequiredText(formData, "review_content", 6000);
   const address = readRequiredText(formData, "address", 500);

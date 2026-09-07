@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Kanit, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
-import { DEFAULT_CATEGORIES } from "@/lib/categories";
 import "./globals.css";
 
 // app/layout.tsx
@@ -26,6 +25,16 @@ const notoSansThai = Noto_Sans_Thai({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
+// Keep the site shell independent from the database. A database/API outage must
+// never prevent the admin page, login, or public navigation from rendering.
+const NAVIGATION_CATEGORIES = [
+  { slug: "food", label: "ร้านอาหาร" },
+  { slug: "cafe", label: "คาเฟ่" },
+  { slug: "trip", label: "ที่เที่ยว" },
+  { slug: "stay", label: "ที่พัก" },
+  { slug: "market", label: "ตลาด" },
+];
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -42,7 +51,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const categories = DEFAULT_CATEGORIES;
+  const categories = NAVIGATION_CATEGORIES;
   return (
     <html lang="th" className={`${kanit.variable} ${notoSansThai.variable}`}>
       <body className="min-h-screen bg-white font-[family-name:var(--font-noto-sans-thai)] text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-50">

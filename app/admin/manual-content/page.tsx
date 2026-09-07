@@ -13,6 +13,7 @@ import { ManualContentForm, type EditableManualReview } from "./manual-content-f
 import { DeleteReviewButton } from "./delete-review-button";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export const metadata: Metadata = {
   title: "Manual Content Entry",
@@ -41,6 +42,7 @@ const errorMessages: Record<string, string> = {
 };
 
 async function getManualReview(slug: string): Promise<EditableManualReview | null> {
+  try {
   // ไม่กรอง source ตรงนี้ — รีวิวที่ดึงจาก Facebook อัตโนมัติ (source: "facebook_auto")
   // ต้องแก้ไขได้จากหน้านี้เช่นกัน ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง (source: "manual")
   const { data, error } = await getSupabaseAdmin()
@@ -64,9 +66,14 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
     imageUrl: data.cover_image ?? "",
     address: data.location_text ?? "สุพรรณบุรี",
   };
+  } catch (error) {
+    console.error("[manual-content] Failed to load review for editing:", error);
+    return null;
+  }
 }
 
 async function getRecentReviews(): Promise<ManualReviewListItem[]> {
+  try {
   // แสดงรีวิวล่าสุดทุกแหล่งที่มา (ทั้งพิมพ์เพิ่มเองและดึงจาก Facebook อัตโนมัติ)
   // เพื่อให้กดแก้ไขคลิปที่อัปโหลดไปแล้วได้จากหน้านี้จุดเดียว
   const { data, error } = await getSupabaseAdmin()
@@ -82,6 +89,10 @@ async function getRecentReviews(): Promise<ManualReviewListItem[]> {
   }
 
   return data ?? [];
+  } catch (error) {
+    console.error("[manual-content] Failed to load recent review list:", error);
+    return [];
+  }
 }
 
 export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {

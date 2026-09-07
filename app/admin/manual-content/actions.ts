@@ -236,7 +236,7 @@ export async function importCaptionDraft(
 
 // เพดานขนาดไฟล์อัปโหลด: กันไม่ให้ชนเพดาน request body ของ Server Actions บน
 // Vercel (ปรับไว้ที่ 25mb ใน next.config.js แล้ว) เผื่อระยะปลอดภัยไว้ด้วย
-const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
 
 /**
  * ถอดเสียงจากไฟล์วิดีโอที่ผู้ใช้อัปโหลดเอง (ใช้กับ TikTok เป็นหลัก เพราะ TikTok
@@ -257,7 +257,7 @@ export async function transcribeUploadedVideo(
     return { status: "error", message: "กรุณาเลือกไฟล์วิดีโอก่อน" };
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return { status: "error", message: "ไฟล์ใหญ่เกินไป (จำกัดไม่เกิน 20MB) กรุณาบีบอัดไฟล์ก่อนอัปโหลด" };
+    return { status: "error", message: "ไฟล์ใหญ่เกินไป (จำกัดไม่เกิน 30MB) กรุณาบีบอัดไฟล์ก่อนอัปโหลด" };
   }
 
   try {

@@ -240,7 +240,7 @@ export function ManualContentForm({ initialReview }: ManualContentFormProps) {
             <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
               TikTok ไม่มีทางดึงไฟล์วิดีโอมาถอดเสียงให้อัตโนมัติ — กด &quot;บันทึกวิดีโอ&quot; จากคลิปของคุณเองในแอป TikTok ก่อน
               แล้วอัปโหลดไฟล์ตรงนี้ ระบบจะถอดเสียงพากย์เป็นข้อความแล้วแปะต่อท้ายช่อง &quot;รายละเอียด/เนื้อหารีวิว&quot; ด้านล่างให้
-              (จำกัดไฟล์ไม่เกิน 20MB ต้องตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN ก่อนถึงจะใช้ได้)
+              (จำกัดไฟล์ไม่เกิน 30MB ต้องตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN ก่อนถึงจะใช้ได้)
             </p>
             <form action={transcribeAction} className="mt-3">
               <label htmlFor="video_file" className="text-sm font-semibold">ไฟล์วิดีโอ</label>

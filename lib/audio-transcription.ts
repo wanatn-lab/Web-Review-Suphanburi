@@ -1,4 +1,5 @@
 import "server-only";
+import { Buffer } from "node:buffer";
 
 // Transcribes a review clip's spoken narration into Thai text using
 // Cloudflare Workers AI's hosted Whisper model, called over Cloudflare's
@@ -26,7 +27,7 @@ import "server-only";
 // this project goes through that one function.
 
 const WHISPER_MODEL = "@cf/openai/whisper-large-v3-turbo";
-const REQUEST_TIMEOUT_MS = 25_000;
+const REQUEST_TIMEOUT_MS = 55_000;
 const DOWNLOAD_TIMEOUT_MS = 30_000;
 // Cloudflare Workers AI has its own per-request payload ceiling and Vercel
 // serverless functions have bounded memory -- a review clip is a few tens of
@@ -80,7 +81,12 @@ export async function transcribeAudio(
         Authorization: `Bearer ${credentials.apiToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ audio: Array.from(new Uint8Array(mediaBytes)) }),
+      body: JSON.stringify({
+        audio: Buffer.from(mediaBytes).toString("base64"),
+        task: "transcribe",
+        language: "th",
+        vad_filter: true,
+      }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 

@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createManualSeoContent, createSlug } from "../lib/manual-content";
+import { createEnhancedSeoContent, createManualSeoContent, createSlug } from "../lib/manual-content";
+
+async function withFetchResponse<T>(payload: unknown, status: number, callback: () => Promise<T>): Promise<T> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify(payload), { status });
+  try {
+    return await callback();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
 
 function hasOnlyByteStringSafeChars(value: string): boolean {
   // HTTP header values (and Next.js's revalidatePath/internal cache keys) must be
@@ -29,8 +39,14 @@ test("createSlug never returns an empty string", () => {
 });
 
 test("createManualSeoContent always produces a ByteString-safe slugBase for Thai place names", () => {
+  // Regression fix: createManualSeoContent now takes a { slug, label } category
+  // object (since the "manage categories from admin" feature made categories
+  // data-driven) instead of the old hardcoded "restaurant"/"attraction" strings.
+  // This test predates that change and was crashing on every run -- verified
+  // failing on main before this fix (TypeError: Cannot read properties of
+  // undefined (reading 'includes')) because a plain string has no `.label`.
   const seo = createManualSeoContent(
-    "restaurant",
+    { slug: "food", label: "ร้านอาหาร" },
     "ร้านก๋วยเตี๋ยวเรือลุงมี",
     "รีวิวร้านก๋วยเตี๋ยวเรือ น้ำซุปเข้มข้น เส้นนุ่ม ราคาย่อมเยา"
   );
@@ -42,8 +58,70 @@ test("createManualSeoContent always produces a ByteString-safe slugBase for Thai
 });
 
 test("createManualSeoContent produces a ByteString-safe slugBase for Thai attraction names", () => {
-  const seo = createManualSeoContent("attraction", "วัดป่าเลไลยก์วรวิหาร", "สถานที่ท่องเที่ยวเก่าแก่คู่เมืองสุพรรณบุรี");
+  const seo = createManualSeoContent(
+    { slug: "trip", label: "ที่เที่ยว" },
+    "วัดป่าเลไลยก์วรวิหาร",
+    "สถานที่ท่องเที่ยวเก่าแก่คู่เมืองสุพรรณบุรี"
+  );
 
   assert.equal(hasOnlyByteStringSafeChars(seo.slugBase), true);
   assert.equal(seo.slugBase, "trip");
+});
+
+test("createEnhancedSeoContent falls back to the template when Cloudflare credentials are missing", async () => {
+  const originalAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const originalApiToken = process.env.CLOUDFLARE_AI_API_TOKEN;
+  delete process.env.CLOUDFLARE_ACCOUNT_ID;
+  delete process.env.CLOUDFLARE_AI_API_TOKEN;
+
+  try {
+    const seo = await createEnhancedSeoContent(
+      { slug: "food", label: "ร้านอาหาร" },
+      "ร้านทดสอบ",
+      "รีวิวร้านทดสอบ อร่อยมาก"
+    );
+
+    assert.equal(seo.aiGenerated, false);
+    assert.equal(seo.slugBase, "food");
+  } finally {
+    if (originalAccountId) process.env.CLOUDFLARE_ACCOUNT_ID = originalAccountId;
+    if (originalApiToken) process.env.CLOUDFLARE_AI_API_TOKEN = originalApiToken;
+  }
+});
+
+test("createEnhancedSeoContent uses the AI-written copy when Cloudflare responds successfully", async () => {
+  const originalAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const originalApiToken = process.env.CLOUDFLARE_AI_API_TOKEN;
+  process.env.CLOUDFLARE_ACCOUNT_ID = "acc_123";
+  process.env.CLOUDFLARE_AI_API_TOKEN = "token_abc";
+
+  try {
+    const modelReply = JSON.stringify({
+      title: "ร้านทดสอบ สุพรรณบุรี",
+      description: "คำโปรยที่เขียนโดย AI จากแคปชั่นจริง",
+    });
+
+    const seo = await withFetchResponse(
+      { success: true, result: { response: modelReply } },
+      200,
+      () =>
+        createEnhancedSeoContent(
+          { slug: "food", label: "ร้านอาหาร" },
+          "ร้านทดสอบ",
+          "รีวิวร้านทดสอบ อร่อยมาก"
+        )
+    );
+
+    assert.equal(seo.aiGenerated, true);
+    assert.equal(seo.title, "ร้านทดสอบ สุพรรณบุรี");
+    assert.equal(seo.description, "คำโปรยที่เขียนโดย AI จากแคปชั่นจริง");
+    // slugBase must stay derived from the place name/category regardless of
+    // what the AI wrote -- URLs need to stay stable and predictable.
+    assert.equal(seo.slugBase, "food");
+  } finally {
+    if (originalAccountId) process.env.CLOUDFLARE_ACCOUNT_ID = originalAccountId;
+    else delete process.env.CLOUDFLARE_ACCOUNT_ID;
+    if (originalApiToken) process.env.CLOUDFLARE_AI_API_TOKEN = originalApiToken;
+    else delete process.env.CLOUDFLARE_AI_API_TOKEN;
+  }
 });

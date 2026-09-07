@@ -100,3 +100,35 @@
 
 - แจ้งเตือนผ่าน Slack/LINE/Email เมื่อ token refresh ล้มเหลว (ตอนนี้เห็นได้แค่ใน Vercel Cron Jobs log)
 - รองรับหลายเพจ Facebook พร้อมกัน (ตาราง `facebook_tokens` ออกแบบให้ต่อยอดได้อยู่แล้วเพราะ key ด้วย `page_id`)
+
+## ✅ ใหม่ — ถอดเสียงจากคลิป + เขียนคำโปรย SEO ด้วย AI (Cloudflare Workers AI)
+
+เพิ่มตามคำขอ: อยากให้ระบบดึงแคปชั่น **และเสียงพากย์** จากลิงก์ที่วางในหลังบ้าน มาช่วยเขียน SEO ให้ดีขึ้น โดยเน้นใช้ของฟรี
+
+- `lib/audio-transcription.ts` — เรียก Cloudflare Workers AI (`@cf/openai/whisper-large-v3-turbo`) ผ่าน REST API ธรรมดา (ไม่ต้องย้ายโปรเจกต์ไปรันบน Cloudflare) เพื่อถอดเสียงพากย์ในคลิปเป็นข้อความ — เลือก Cloudflare เพราะมีโควตาฟรี **10,000 neurons/วัน** ซึ่งที่ราคา $0.00051/นาทีเสียงของโมเดลนี้ ครอบคลุมได้ ~200+ นาที/วัน ฟรี เกินพอสำหรับปริมาณคลิปของเว็บนี้
+  - `downloadMediaBytes()` โหลดไฟล์วิดีโอจาก URL ตรง (เช่น field `source` ของ Facebook Graph API) พร้อมจำกัดขนาดไม่เกิน 60MB กันหน่วยความจำ serverless ระเบิด
+  - fail-open ทุกจุด: ถ้ายังไม่ตั้งค่า `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_AI_API_TOKEN` หรือเรียก API ไม่สำเร็จ จะคืน `null` เฉยๆ ไม่ทำให้การนำเข้าโพสต์อื่นพังไปด้วย
+  - **ต้องตรวจสอบก่อนใช้งานจริง**: รูปแบบ request (`{"audio": [byte array]}`) อ้างอิงจากรูปแบบที่ Cloudflare เคยเอกสารไว้สำหรับโมเดล Whisper แต่ตอนเขียนโค้ดนี้ดึง `schema-input.json` เต็มไม่ได้ — แนะนำให้รันจริง 1 คลิปทดสอบทันทีที่มี Cloudflare credentials แล้ว
+- `lib/seo-content-generator.ts` — ส่งแคปชั่น + ทรานสคริปต์ไปให้ Cloudflare Workers AI (`@cf/meta/llama-3.1-8b-instruct`, ฟรีในโควตาเดียวกัน) เขียน title/description ใหม่แบบยาวขึ้น เป็นธรรมชาติ ไม่ยัดคีย์เวิร์ด แทนสูตร `"<เนื้อหา> | <keyword>"` เดิม — สั่งในพรอมป์ชัดเจนว่าใช้เฉพาะข้อมูลที่มีจริง ห้ามแต่งเพิ่ม
+- `lib/manual-content.ts` — เพิ่ม `createEnhancedSeoContent()` (async): เรียก `generateSeoCopy()` ก่อน ถ้าไม่สำเร็จ (ยังไม่ตั้งค่า Cloudflare, เรียก API ไม่ผ่าน, หรือ parse JSON ไม่ได้) จะ fallback กลับไปใช้ `createManualSeoContent()` สูตรเดิมโดยอัตโนมัติ — `slugBase` ยังคงมาจากชื่อสถานที่+หมวดหมู่เสมอ ไม่ใช้ข้อความที่ AI เขียน กัน URL เปลี่ยนไปมา
+- `app/admin/manual-content/actions.ts` — `createManualReview`/`updateManualReview` เปลี่ยนไปเรียก `createEnhancedSeoContent()` แทน `createManualSeoContent()` ตรงๆ (มีผลกับทุกช่องทาง: นำเข้าจาก Facebook/TikTok, วางแคปชั่นเอง, หรือพิมพ์เอง — เพราะทุกอย่างไหลผ่านฟอร์มเดียวกัน)
+- `lib/facebook-manual-import.ts` — เพิ่ม `tryTranscribeFacebookVideo()`: ขอ field `source` (ลิงก์ไฟล์วิดีโอตรง) จาก Graph API ของโพสต์นั้น ดาวน์โหลด แล้วส่งถอดเสียง ผลลัพธ์แปะต่อท้ายแคปชั่นในช่อง "รายละเอียด/เนื้อหารีวิว" ให้เอง (คั่นด้วยหัวข้อ `[ถอดเสียงจากคลิปอัตโนมัติ]` ให้เห็นชัดว่าส่วนไหนมาจากไหน) — **ยังไม่ได้ทดสอบกับ token จริง** เพราะ FB_PAGE_ACCESS_TOKEN ของเจ้าของโปรเจกต์ยังอยู่ระหว่างรออนุมัติ จุดที่เสี่ยงที่สุดคือ field `source` อาจต้อง query คนละ id กับโพสต์ (โค้ดเดิมของไฟล์นี้เองก็มีปัญหานี้กับ Reels อยู่แล้ว ดู `findVideoFromPageFeed`) — ถ้าใช้งานจริงแล้วไม่ได้ผล ให้ตรวจ id ที่ส่งเข้า `tryTranscribeFacebookVideo` เป็นจุดแรก
+- **TikTok ถอดเสียงไม่ได้แบบอัตโนมัติ** — TikTok ไม่มี API สาธารณะให้ดาวน์โหลดไฟล์วิดีโอ (ต่างจาก Facebook ที่เป็นเพจของเราเอง) จึงเพิ่มทางเลือกแทน: ส่วนใหม่ "ถอดเสียงจากไฟล์วิดีโอ" ในฟอร์ม `/admin/manual-content` ให้อัปโหลดไฟล์ (กด "บันทึกวิดีโอ" จากแอป TikTok เองก่อน) แล้วระบบถอดเสียงแปะต่อท้ายเนื้อหาให้ — action ใหม่ `transcribeUploadedVideo` (จำกัดไฟล์ 20MB ไม่เก็บไฟล์ไว้ที่ไหน ถอดเสียงแล้วทิ้ง)
+- `next.config.js` — เพิ่ม `experimental.serverActions.bodySizeLimit: "25mb"` (ค่าเริ่มต้นของ Next.js คือ 1mb ซึ่งเล็กเกินไปสำหรับอัปโหลดไฟล์วิดีโอข้างต้น)
+- แก้บั๊กเดิมที่เจอระหว่างทาง: `tests/manual-content.test.ts` เรียก `createManualSeoContent()` ด้วย string เก่า (`"restaurant"`/`"attraction"`) ซึ่งพังมาตั้งแต่ commit `feat: manage review categories from admin` เปลี่ยน signature เป็น object `{slug, label}` — ยืนยันแล้วว่า fail จริงบน `main` (`npx tsx --test tests/manual-content.test.ts` ก่อนแก้: 2 fail, 3 pass) แก้ให้ตรงกับ signature ปัจจุบัน
+- เทสต์ใหม่: `tests/audio-transcription.test.ts`, `tests/seo-content-generator.test.ts`, เพิ่มเคสใน `tests/manual-content.test.ts` — mock `fetch` แบบเดียวกับที่ `tests/facebook-token.test.ts` ทำไว้แล้ว
+
+**ต้องเพิ่ม environment variable ใหม่ 2 ตัวใน Vercel ก่อนฟีเจอร์นี้จะทำงาน (ดูวิธีขอใน `.env.local.example`):**
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_AI_API_TOKEN`
+
+ถ้ายังไม่ได้ตั้ง 2 ตัวนี้: ทุกอย่างทำงานเหมือนเดิมทุกประการ (ถอดเสียง/เขียน SEO ด้วย AI จะแค่ข้ามไปเงียบๆ กลับไปใช้พฤติกรรมเดิมของระบบ) ไม่กระทบการนำเข้า/บันทึกรีวิวเลย
+
+## ขั้นตอนถัดไปสำหรับเจ้าของ repo (ฟีเจอร์นี้)
+
+1. สมัคร Cloudflare account (ถ้ายังไม่มี) แล้วขอ `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_AI_API_TOKEN` ตามวิธีใน `.env.local.example`
+2. ตั้งค่า 2 ตัวแปรนี้ใน Vercel Environment Variables แล้ว Redeploy
+3. ทดสอบ: ไปที่ `/admin/manual-content` → ใช้ "วางแคปชั่นด้วยตัวเอง" สร้างฉบับร่าง → บันทึก → ตรวจว่า title/description ที่ได้ยาวและเป็นธรรมชาติกว่าเดิม (ไม่ใช่รูปแบบ `"<เนื้อหา> | <keyword>"` แบบเก่า) — ถ้ายังเป็นแบบเก่าอยู่ แปลว่า Cloudflare credentials ยังไม่ถูกอ่าน หรือ request ไปเรียก Cloudflare ไม่ผ่าน ให้เช็ค log ใน Vercel
+4. ทดสอบถอดเสียงจากไฟล์: ไปที่ส่วน "ถอดเสียงจากไฟล์วิดีโอ" อัปโหลดคลิปสั้นๆ (ไม่เกิน 20MB) แล้วดูว่าข้อความถอดเสียงแปะเข้าช่องเนื้อหารีวิวหรือไม่
+5. เมื่อ `FB_PAGE_ACCESS_TOKEN` ผ่านการอนุมัติแล้ว: ทดสอบ "นำเข้าจาก Facebook" กับโพสต์ที่มีคลิปจริง 1 โพสต์ ดูว่าได้ทรานสคริปต์กลับมาไหม — ถ้าไม่ได้ ดูหมายเหตุเรื่อง `tryTranscribeFacebookVideo` ด้านบน (จุดเสี่ยงคือ Graph API id ของ Reels/วิดีโอ)

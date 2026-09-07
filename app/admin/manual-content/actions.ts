@@ -14,13 +14,14 @@ import {
 } from "@/lib/admin-auth";
 import { geocodeLocation } from "@/lib/geocoding";
 import { mirrorCoverImage } from "@/lib/cover-image-mirror";
-import { createManualSeoContent, type ManualSeoCategory } from "@/lib/manual-content";
+import { createEnhancedSeoContent, type ManualSeoCategory } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/facebook-manual-import";
 import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manual-import";
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
+import { transcribeAudio } from "@/lib/audio-transcription";
 
 const ADMIN_PATH = "/admin/manual-content";
 
@@ -48,6 +49,11 @@ export type CaptionImportState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | { status: "success"; draft: CaptionDraft };
+
+export type TranscribeUploadState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; transcript: string };
 
 function readRequiredText(formData: FormData, key: string, maxLength: number): string | null {
   const value = formData.get(key);
@@ -221,6 +227,49 @@ export async function importCaptionDraft(
   };
 }
 
+// เพดานขนาดไฟล์อัปโหลด: กันไม่ให้ชนเพดาน request body ของ Server Actions บน
+// Vercel (ปรับไว้ที่ 25mb ใน next.config.js แล้ว) เผื่อระยะปลอดภัยไว้ด้วย
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+/**
+ * ถอดเสียงจากไฟล์วิดีโอที่ผู้ใช้อัปโหลดเอง (ใช้กับ TikTok เป็นหลัก เพราะ TikTok
+ * ไม่มี API สาธารณะให้ดาวน์โหลดไฟล์วิดีโอโดยตรง — ต้องกด "บันทึกวิดีโอ" จาก
+ * แอป TikTok เองก่อน แล้วอัปโหลดไฟล์เข้ามาที่นี่) ไม่บันทึกไฟล์ลงที่ไหน
+ * ใช้แค่ถอดเสียงแล้วทิ้ง คืนข้อความให้ผู้ใช้กดแปะต่อในช่องเนื้อหารีวิวเอง
+ */
+export async function transcribeUploadedVideo(
+  _previousState: TranscribeUploadState,
+  formData: FormData
+): Promise<TranscribeUploadState> {
+  if (!isAuthenticated()) {
+    return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
+  }
+
+  const file = formData.get("video_file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "กรุณาเลือกไฟล์วิดีโอก่อน" };
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { status: "error", message: "ไฟล์ใหญ่เกินไป (จำกัดไม่เกิน 20MB) กรุณาบีบอัดไฟล์ก่อนอัปโหลด" };
+  }
+
+  try {
+    const bytes = await file.arrayBuffer();
+    const transcript = await transcribeAudio(bytes);
+    if (!transcript) {
+      return {
+        status: "error",
+        message:
+          "ถอดเสียงไม่สำเร็จ — ตรวจว่าตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN แล้ว หรือคลิปนี้อาจไม่มีเสียงพูด",
+      };
+    }
+    return { status: "success", transcript };
+  } catch (error) {
+    console.error("[manual-content] transcribeUploadedVideo failed:", error instanceof Error ? error.message : error);
+    return { status: "error", message: "เกิดข้อผิดพลาดระหว่างถอดเสียง กรุณาลองใหม่" };
+  }
+}
+
 export async function loginAdmin(formData: FormData) {
   const password = formData.get("password");
 
@@ -331,7 +380,11 @@ export async function createManualReview(formData: FormData) {
   if (!categoryConfig) {
     redirect(`${ADMIN_PATH}?error=validation`);
   }
-  const seo = createManualSeoContent(categoryConfig, placeName, reviewContent);
+  // createEnhancedSeoContent tries Cloudflare's Llama model first for a
+  // longer, more natural title/description, and silently falls back to the
+  // plain keyword-template version (createManualSeoContent) if Cloudflare
+  // isn't configured or the request fails -- either way this always resolves.
+  const seo = await createEnhancedSeoContent(categoryConfig, placeName, reviewContent);
   const embedUrls = embedUrlsForReference(referenceUrl);
 
   const { data: existingSlug, error: slugError } = await supabaseAdmin
@@ -419,7 +472,7 @@ export async function updateManualReview(formData: FormData) {
   if (!categoryConfig) {
     redirect(`${ADMIN_PATH}?error=validation`);
   }
-  const seo = createManualSeoContent(categoryConfig, placeName, reviewContent);
+  const seo = await createEnhancedSeoContent(categoryConfig, placeName, reviewContent);
   const coordinates = await geocodeLocation(address);
   const embedUrls = embedUrlsForReference(referenceUrl);
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราวมาเก็บถาวรที่ Supabase Storage เหมือนตอนสร้าง —

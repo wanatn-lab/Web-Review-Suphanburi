@@ -15,7 +15,9 @@ import {
   type TranscribeUploadState,
 } from "./actions";
 
-type FormCategory = "restaurant" | "attraction";
+export interface ContentCategory { slug: string; label: string; is_active: boolean; }
+
+type FormCategory = string;
 
 interface FormValues {
   category: FormCategory;
@@ -32,6 +34,7 @@ export interface EditableManualReview extends FormValues {
 
 interface ManualContentFormProps {
   initialReview?: EditableManualReview | null;
+  categories: ContentCategory[];
 }
 
 const initialImportState: FacebookImportState = { status: "idle" };
@@ -42,15 +45,21 @@ const initialTranscribeState: TranscribeUploadState = { status: "idle" };
 const inputClass =
   "mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-[#DA3D0D] focus:ring-2 focus:ring-[#DA3D0D]/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50";
 
-function emptyValues(): FormValues {
+function emptyValues(categories: ContentCategory[]): FormValues {
   return {
-    category: "restaurant",
+    category: categories.find((category) => category.is_active)?.slug ?? "",
     placeName: "",
     reviewContent: "",
     referenceUrl: "",
     imageUrl: "",
     address: "",
   };
+}
+
+function draftCategory(value: string, categories: ContentCategory[]): string {
+  if (categories.some((category) => category.slug === value && category.is_active)) return value;
+  const legacy = value === "attraction" ? "trip" : value === "restaurant" ? "food" : "";
+  return categories.find((category) => category.slug === legacy && category.is_active)?.slug ?? categories.find((category) => category.is_active)?.slug ?? "";
 }
 
 function ImportSubmitButton() {
@@ -105,52 +114,52 @@ function TranscribeSubmitButton() {
   );
 }
 
-export function ManualContentForm({ initialReview }: ManualContentFormProps) {
+export function ManualContentForm({ initialReview, categories }: ManualContentFormProps) {
   const [importState, importAction] = useFormState(importFacebookDraft, initialImportState);
   const [captionImportState, captionImportAction] = useFormState(importCaptionDraft, initialCaptionImportState);
   const [tikTokImportState, tikTokImportAction] = useFormState(importTikTokDraft, initialTikTokImportState);
   const [transcribeState, transcribeAction] = useFormState(transcribeUploadedVideo, initialTranscribeState);
-  const [values, setValues] = useState<FormValues>(initialReview ?? emptyValues());
+  const [values, setValues] = useState<FormValues>(initialReview ?? emptyValues(categories));
   const isEditing = Boolean(initialReview);
 
   useEffect(() => {
     if (importState.status !== "success") return;
 
     setValues({
-      category: importState.draft.category,
+      category: draftCategory(importState.draft.category, categories),
       placeName: importState.draft.placeName,
       reviewContent: importState.draft.reviewContent,
       referenceUrl: importState.draft.referenceUrl,
       imageUrl: importState.draft.imageUrl,
       address: importState.draft.address,
     });
-  }, [importState]);
+  }, [importState, categories]);
 
   useEffect(() => {
     if (captionImportState.status !== "success") return;
 
     setValues({
-      category: captionImportState.draft.category,
+      category: draftCategory(captionImportState.draft.category, categories),
       placeName: captionImportState.draft.placeName,
       reviewContent: captionImportState.draft.reviewContent,
       referenceUrl: captionImportState.draft.referenceUrl,
       imageUrl: captionImportState.draft.imageUrl,
       address: captionImportState.draft.address,
     });
-  }, [captionImportState]);
+  }, [captionImportState, categories]);
 
   useEffect(() => {
     if (tikTokImportState.status !== "success") return;
 
     setValues({
-      category: tikTokImportState.draft.category,
+      category: draftCategory(tikTokImportState.draft.category, categories),
       placeName: tikTokImportState.draft.placeName,
       reviewContent: tikTokImportState.draft.reviewContent,
       referenceUrl: tikTokImportState.draft.referenceUrl,
       imageUrl: tikTokImportState.draft.imageUrl,
       address: tikTokImportState.draft.address,
     });
-  }, [tikTokImportState]);
+  }, [tikTokImportState, categories]);
 
   // ถอดเสียงจากไฟล์ที่อัปโหลดสำเร็จ -> แปะต่อท้ายเนื้อหารีวิวปัจจุบัน (ไม่ทับของเดิม
   // เพราะฟีเจอร์นี้มักถูกใช้ "เสริม" แคปชั่น/ฉบับร่างที่ดึงมาจาก TikTok ไว้แล้ว)
@@ -321,10 +330,12 @@ export function ManualContentForm({ initialReview }: ManualContentFormProps) {
             required
             className={inputClass}
             value={values.category}
-            onChange={(event) => updateValue("category", event.target.value as FormCategory)}
+            onChange={(event) => updateValue("category", event.target.value)}
           >
-            <option value="restaurant">ร้านอาหาร (Restaurant)</option>
-            <option value="attraction">สถานที่ท่องเที่ยว (Attraction)</option>
+            <option value="" disabled>เลือกหมวดหมู่</option>
+            {categories.filter((category) => category.is_active).map((category) => (
+              <option key={category.slug} value={category.slug}>{category.label}</option>
+            ))}
           </select>
         </div>
 

@@ -9,7 +9,7 @@ import {
 } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { loginAdmin, loginAdminWithEmail, logoutAdmin } from "./actions";
-import { ManualContentForm, type EditableManualReview } from "./manual-content-form";
+import { ManualContentForm, type ContentCategory, type EditableManualReview } from "./manual-content-form";
 import { DeleteReviewButton } from "./delete-review-button";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,14 @@ interface ManualReviewListItem {
   title: string;
   location_text: string | null;
 }
+
+const fallbackCategories: ContentCategory[] = [
+  { slug: "food", label: "ร้านอาหาร", is_active: true },
+  { slug: "cafe", label: "คาเฟ่", is_active: true },
+  { slug: "trip", label: "ที่เที่ยว", is_active: true },
+  { slug: "stay", label: "ที่พัก", is_active: true },
+  { slug: "market", label: "ตลาด", is_active: true },
+];
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-[#DA3D0D] focus:ring-2 focus:ring-[#DA3D0D]/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50";
@@ -92,6 +100,21 @@ async function getRecentReviews(): Promise<ManualReviewListItem[]> {
   } catch (error) {
     console.error("[manual-content] Failed to load recent review list:", error);
     return [];
+  }
+}
+
+async function getManagedCategories(): Promise<ContentCategory[]> {
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("categories")
+      .select("slug, label, is_active")
+      .order("sort_order", { ascending: true })
+      .order("label", { ascending: true });
+    if (error || !data?.length) return fallbackCategories;
+    return data as ContentCategory[];
+  } catch (error) {
+    console.error("[manual-content] Failed to load categories:", error);
+    return fallbackCategories;
   }
 }
 
@@ -194,9 +217,10 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
     );
   }
 
-  const [editReview, recentReviews] = await Promise.all([
+  const [editReview, recentReviews, categories] = await Promise.all([
     searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
     getRecentReviews(),
+    getManagedCategories(),
   ]);
 
   return (
@@ -256,7 +280,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         key ตัวนี้ การกดลิงก์ "แก้ไข" จากหน้าเดิม (Next.js client-side navigation ไม่ reload หน้า) จะทำให้
         ฟอร์มค้างค่าง่างเดิม/ว่างเปล่า ดูเหมือนฟีเจอร์แก้ไขใช้งานไม่ได้ทั้งที่ข้อมูลจริงถูกโหลดมาแล้ว
       */}
-      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} />
+      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} categories={categories} />
 
       <section className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
         <h2 className="text-lg font-extrabold">จัดการหมวดหมู่</h2>

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { supabase } from "@/lib/supabase";
 import {
   createManualReview,
   importCaptionDraft,
   importFacebookDraft,
   importTikTokDraft,
-  transcribeUploadedVideo,
+  prepareTranscriptionUpload,
+  transcribeStoredVideo,
   updateManualReview,
   type CaptionImportState,
   type FacebookImportState,
@@ -101,15 +103,10 @@ function TikTokSubmitButton() {
   );
 }
 
-function TranscribeSubmitButton() {
-  const { pending } = useFormStatus();
+function TranscribeSubmitButton({ pending, onClick }: { pending: boolean; onClick: () => void }) {
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="mt-3 rounded-xl border border-emerald-600 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60 dark:border-emerald-500 dark:text-emerald-300"
-    >
-      {pending ? "กำลังถอดเสียง (อาจใช้เวลาสักครู่)..." : "ถอดเสียงจากไฟล์วิดีโอ"}
+    <button type="button" onClick={onClick} disabled={pending} className="mt-3 rounded-xl border border-emerald-600 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60 dark:border-emerald-500 dark:text-emerald-300">
+      {pending ? "กำลังอัปโหลดและถอดเสียง (อาจใช้เวลาสักครู่)..." : "ถอดเสียงจากไฟล์วิดีโอ"}
     </button>
   );
 }
@@ -118,7 +115,9 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
   const [importState, importAction] = useFormState(importFacebookDraft, initialImportState);
   const [captionImportState, captionImportAction] = useFormState(importCaptionDraft, initialCaptionImportState);
   const [tikTokImportState, tikTokImportAction] = useFormState(importTikTokDraft, initialTikTokImportState);
-  const [transcribeState, transcribeAction] = useFormState(transcribeUploadedVideo, initialTranscribeState);
+  const [transcribeState, setTranscribeState] = useState<TranscribeUploadState>(initialTranscribeState);
+  const [transcriptionFile, setTranscriptionFile] = useState<File | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [values, setValues] = useState<FormValues>(initialReview ?? emptyValues(categories));
   const isEditing = Boolean(initialReview);
 
@@ -176,6 +175,35 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
 
   function updateValue<Key extends keyof FormValues>(key: Key, value: FormValues[Key]) {
     setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  async function transcribeSelectedFile() {
+    if (!transcriptionFile) {
+      setTranscribeState({ status: "error", message: "กรุณาเลือกไฟล์วิดีโอหรือเสียงก่อน" });
+      return;
+    }
+    setIsTranscribing(true);
+    setTranscribeState({ status: "idle" });
+    try {
+      const ticket = await prepareTranscriptionUpload(transcriptionFile.name, transcriptionFile.type || "application/octet-stream", transcriptionFile.size);
+      if (ticket.status === "error") {
+        setTranscribeState(ticket);
+        return;
+      }
+      const { error: uploadError } = await supabase.storage.from("review-media").uploadToSignedUrl(ticket.path, ticket.token, transcriptionFile, {
+        contentType: transcriptionFile.type || undefined,
+      });
+      if (uploadError) {
+        setTranscribeState({ status: "error", message: "อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่" });
+        return;
+      }
+      setTranscribeState(await transcribeStoredVideo(ticket.path));
+    } catch (error) {
+      console.error("[manual-content] Client transcription flow failed:", error);
+      setTranscribeState({ status: "error", message: "เกิดข้อผิดพลาดระหว่างอัปโหลดหรือถอดเสียง กรุณาลองใหม่" });
+    } finally {
+      setIsTranscribing(false);
+    }
   }
 
   return (
@@ -251,18 +279,11 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
               แล้วอัปโหลดไฟล์ตรงนี้ ระบบจะถอดเสียงพากย์เป็นข้อความแล้วแปะต่อท้ายช่อง &quot;รายละเอียด/เนื้อหารีวิว&quot; ด้านล่างให้
               (จำกัดไฟล์ไม่เกิน 30MB ต้องตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN ก่อนถึงจะใช้ได้)
             </p>
-            <form action={transcribeAction} className="mt-3">
-              <label htmlFor="video_file" className="text-sm font-semibold">ไฟล์วิดีโอ</label>
-              <input
-                id="video_file"
-                name="video_file"
-                type="file"
-                accept="video/*,audio/*"
-                required
-                className={inputClass}
-              />
-              <TranscribeSubmitButton />
-            </form>
+            <div className="mt-3">
+              <label htmlFor="video_file" className="text-sm font-semibold">ไฟล์วิดีโอหรือเสียง</label>
+              <input id="video_file" type="file" accept="video/mp4,video/quicktime,video/webm,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac" className={inputClass} onChange={(event) => setTranscriptionFile(event.target.files?.[0] ?? null)} />
+              <TranscribeSubmitButton pending={isTranscribing} onClick={transcribeSelectedFile} />
+            </div>
             {transcribeState.status === "error" && (
               <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
                 {transcribeState.message}

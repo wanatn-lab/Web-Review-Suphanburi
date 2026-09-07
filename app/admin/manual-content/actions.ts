@@ -119,7 +119,7 @@ function embedUrlsForReference(referenceUrl: string | null) {
 }
 
 async function resolveCoverImage(imageUrl: string | null, referenceUrl: string | null): Promise<string | null> {
-  if (imageUrl || !isTikTokUrl(referenceUrl)) return imageUrl;
+  if (imageUrl || !referenceUrl || !isTikTokUrl(referenceUrl)) return imageUrl;
   try {
     return (await importTikTokPostDraft(referenceUrl)).imageUrl || null;
   } catch (error) {

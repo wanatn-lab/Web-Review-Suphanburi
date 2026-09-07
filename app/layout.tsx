@@ -41,7 +41,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {\n  const categories = await getCategories();
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const categories = await getCategories();
   return (
     <html lang="th" className={`${kanit.variable} ${notoSansThai.variable}`}>
       <body className="min-h-screen bg-white font-[family-name:var(--font-noto-sans-thai)] text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-50">

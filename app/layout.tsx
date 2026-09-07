@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Kanit, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
-import { CATEGORIES } from "@/lib/categories";
+import { getCategories } from "@/lib/categories";
 import "./globals.css";
 
 // app/layout.tsx
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {\n  const categories = await getCategories();
   return (
     <html lang="th" className={`${kanit.variable} ${notoSansThai.variable}`}>
       <body className="min-h-screen bg-white font-[family-name:var(--font-noto-sans-thai)] text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-50">
@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               รีวิวสุพรรณบุรี
             </Link>
             <nav aria-label="เมนูหลัก" className="ml-auto hidden gap-6 text-sm font-medium sm:flex">
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <Link
                   key={c.slug}
                   href={`/category/${c.slug}`}
@@ -89,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 หมวดหมู่
               </h2>
               <ul className="mt-2 flex flex-col gap-2 text-sm">
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <li key={c.slug}>
                     <Link href={`/category/${c.slug}`} className="text-[#FBDDCD] hover:text-white">
                       {c.label}สุพรรณบุรี

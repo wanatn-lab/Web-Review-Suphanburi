@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllReviews } from "@/lib/supabase";
-import { CATEGORIES } from "@/lib/categories";
+import { getCategories } from "@/lib/categories";
 import ReviewCard from "@/components/review-card";
 
 // app/page.tsx — Home Page (Server Component, SSR)
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const reviews = await getAllReviews(12);
+  const [reviews, categories] = await Promise.all([getAllReviews(12), getCategories()]);
   // เดโม: ใช้รีวิวล่าสุด 5 รายการแทน "กำลังมาแรง" ไปก่อน — ถ้าอยากจัดอันดับจริง
   // แนะนำเพิ่มคอลัมน์ view_count แล้วเปลี่ยน order() เป็น view_count desc
   const trending = reviews.slice(0, 5);
@@ -62,7 +62,7 @@ export default async function HomePage() {
         </form>
 
         <ul className="mt-5 flex gap-2 overflow-x-auto pb-1">
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <li key={c.slug}>
               <Link
                 href={`/category/${c.slug}`}

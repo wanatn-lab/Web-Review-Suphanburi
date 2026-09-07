@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getReviewBySlug } from "@/lib/supabase";
-import { CATEGORY_LABEL } from "@/lib/categories";
+import { defaultCategoryLabel } from "@/lib/categories";
 import { VideoPlayer } from "@/components/video-player";
 
 // app/reviews/[slug]/page.tsx
@@ -143,7 +143,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           {review.category && (
             <li className="flex items-center gap-1">
               <Link href={`/category/${review.category}`} className="hover:text-[#FF4B12]">
-                {CATEGORY_LABEL[review.category] ?? review.category}สุพรรณบุรี
+                {review.category_label ?? defaultCategoryLabel(review.category)}สุพรรณบุรี
               </Link>
               <span aria-hidden="true">/</span>
             </li>
@@ -173,7 +173,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
 
           <header className="flex flex-col items-center gap-3 pb-5 text-center">
             <span className="inline-block rounded-md bg-[#FFE3D6] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[#B62F08]">
-              {review.category ? `${CATEGORY_LABEL[review.category] ?? review.category}สุพรรณบุรี` : "รีวิวสุพรรณบุรี"}
+              {review.category ? `${review.category_label ?? defaultCategoryLabel(review.category)}สุพรรณบุรี` : "รีวิวสุพรรณบุรี"}
             </span>
             <h1 className="max-w-[26ch] text-2xl font-extrabold leading-snug text-neutral-900 dark:text-neutral-50 sm:text-3xl">
               {review.title}

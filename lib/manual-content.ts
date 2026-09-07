@@ -1,69 +1,24 @@
-export type ManualContentCategory = "restaurant" | "attraction";
+export interface ManualSeoCategory { slug: string; label: string; }
 
-interface CategoryConfig {
-  databaseCategory: "food" | "trip";
-  keyword: "ร้านอาหารสุพรรณบุรี" | "ที่เที่ยวสุพรรณบุรี";
-  thaiLabel: string;
-}
+function normalizeText(value: string): string { return value.trim().replace(/\s+/g, " "); }
 
-export const MANUAL_CATEGORY_CONFIG: Record<ManualContentCategory, CategoryConfig> = {
-  restaurant: {
-    databaseCategory: "food",
-    keyword: "ร้านอาหารสุพรรณบุรี",
-    thaiLabel: "ร้านอาหาร",
-  },
-  attraction: {
-    databaseCategory: "trip",
-    keyword: "ที่เที่ยวสุพรรณบุรี",
-    thaiLabel: "สถานที่ท่องเที่ยว",
-  },
-};
-
-export function isManualContentCategory(value: string): value is ManualContentCategory {
-  return value === "restaurant" || value === "attraction";
-}
-
-function normalizeText(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-export function createManualSeoContent(
-  category: ManualContentCategory,
-  placeName: string,
-  reviewContent: string
-) {
-  const config = MANUAL_CATEGORY_CONFIG[category];
+export function createManualSeoContent(category: ManualSeoCategory, placeName: string, reviewContent: string) {
   const normalizedName = normalizeText(placeName);
   const normalizedContent = normalizeText(reviewContent);
-  const hasKeywordInName = normalizedName.toLowerCase().includes(config.keyword.toLowerCase());
-  const hasKeywordInContent = normalizedContent.toLowerCase().includes(config.keyword.toLowerCase());
-
-  const title = hasKeywordInName ? normalizedName : `${normalizedName} | ${config.keyword}`;
-  const keywordSentence = `รีวิว${config.thaiLabel} ${normalizedName} สำหรับผู้ที่กำลังค้นหา ${config.keyword} ในจังหวัดสุพรรณบุรี`;
-  const description = hasKeywordInContent
-    ? normalizedContent
-    : `${normalizedContent} ${keywordSentence}`;
-
+  const keyword = category.label.includes("สุพรรณบุรี") ? category.label : `${category.label}สุพรรณบุรี`;
+  const hasKeywordInName = normalizedName.toLowerCase().includes(keyword.toLowerCase());
+  const hasKeywordInContent = normalizedContent.toLowerCase().includes(keyword.toLowerCase());
+  const title = hasKeywordInName ? normalizedName : `${normalizedName} | ${keyword}`;
+  const keywordSentence = `รีวิว${category.label} ${normalizedName} สำหรับผู้ที่กำลังค้นหา ${keyword} ในจังหวัดสุพรรณบุรี`;
   return {
     title,
-    description,
-    slugBase: createSlug(`${normalizedName}-${config.databaseCategory}`),
+    description: hasKeywordInContent ? normalizedContent : `${normalizedContent} ${keywordSentence}`,
+    slugBase: createSlug(`${normalizedName}-${category.slug}`),
   };
 }
 
 export function createSlug(value: string): string {
-  // Keep ASCII letters/numbers only. `\p{Letter}` also matches Thai script, and a
-  // Thai-character slug crashes Next.js's `revalidatePath`/internal header handling
-  // (HTTP header values must be Latin1/ByteString) — place names here are almost
-  // always Thai, so this reliably empties out to the category word, which is fine:
-  // callers already disambiguate collisions by appending a random suffix.
-  const slug = value
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120)
-    .replace(/-+$/g, "");
-
+  const slug = value.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "").slice(0, 120).replace(/-+$/g, "");
   return slug || "review-suphan-buri";
 }

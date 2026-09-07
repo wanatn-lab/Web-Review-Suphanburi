@@ -14,11 +14,7 @@ import {
 } from "@/lib/admin-auth";
 import { geocodeLocation } from "@/lib/geocoding";
 import { mirrorCoverImage } from "@/lib/cover-image-mirror";
-import {
-  createManualSeoContent,
-  isManualContentCategory,
-  MANUAL_CATEGORY_CONFIG,
-} from "@/lib/manual-content";
+import { createManualSeoContent, type ManualSeoCategory } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/facebook-manual-import";
@@ -117,6 +113,35 @@ function embedUrlsForReference(referenceUrl: string | null) {
 
 function isAuthenticated(): boolean {
   return isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+}
+
+function readOptionalText(formData: FormData, key: string, maxLength: number): string | null | undefined {
+  const value = formData.get(key);
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  return normalized.length <= maxLength ? normalized : undefined;
+}
+
+function isCategorySlug(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && value.length <= 48;
+}
+
+async function getActiveCategory(slug: string): Promise<ManualSeoCategory | null> {
+  if (!isCategorySlug(slug)) return null;
+  const { data, error } = await getSupabaseAdmin()
+    .from("categories")
+    .select("slug, label")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[manual-content] Failed to load category:", error.message);
+    return null;
+  }
+
+  return data as ManualSeoCategory | null;
 }
 
 export async function importFacebookDraft(
@@ -290,7 +315,7 @@ export async function createManualReview(formData: FormData) {
   const imageUrl = readOptionalUrl(formData, "image_url");
 
   if (
-    !isManualContentCategory(category) ||
+    !category ||
     !placeName ||
     !reviewContent ||
     !address ||
@@ -302,8 +327,11 @@ export async function createManualReview(formData: FormData) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const seo = createManualSeoContent(category, placeName, reviewContent);
-  const categoryConfig = MANUAL_CATEGORY_CONFIG[category];
+  const categoryConfig = await getActiveCategory(category);
+  if (!categoryConfig) {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+  const seo = createManualSeoContent(categoryConfig, placeName, reviewContent);
   const embedUrls = embedUrlsForReference(referenceUrl);
 
   const { data: existingSlug, error: slugError } = await supabaseAdmin
@@ -331,7 +359,7 @@ export async function createManualReview(formData: FormData) {
       title: seo.title,
       slug,
       description: seo.description,
-      category: categoryConfig.databaseCategory,
+      category: categoryConfig.slug,
       cover_image: coverImage,
       facebook_embed_url: embedUrls.facebookEmbedUrl,
       tiktok_embed_url: embedUrls.tiktokEmbedUrl,
@@ -352,7 +380,7 @@ export async function createManualReview(formData: FormData) {
   }
 
   revalidatePath("/");
-  revalidatePath(`/category/${categoryConfig.databaseCategory}`);
+  revalidatePath(`/category/${categoryConfig.slug}`);
   revalidatePath(`/reviews/${inserted.slug}`);
   revalidatePath("/sitemap.xml");
 
@@ -375,7 +403,7 @@ export async function updateManualReview(formData: FormData) {
 
   if (
     !originalSlug ||
-    !isManualContentCategory(category) ||
+    !category ||
     !placeName ||
     !reviewContent ||
     !address ||
@@ -387,8 +415,11 @@ export async function updateManualReview(formData: FormData) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const seo = createManualSeoContent(category, placeName, reviewContent);
-  const categoryConfig = MANUAL_CATEGORY_CONFIG[category];
+  const categoryConfig = await getActiveCategory(category);
+  if (!categoryConfig) {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+  const seo = createManualSeoContent(categoryConfig, placeName, reviewContent);
   const coordinates = await geocodeLocation(address);
   const embedUrls = embedUrlsForReference(referenceUrl);
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราวมาเก็บถาวรที่ Supabase Storage เหมือนตอนสร้าง —
@@ -404,7 +435,7 @@ export async function updateManualReview(formData: FormData) {
     .update({
       title: seo.title,
       description: seo.description,
-      category: categoryConfig.databaseCategory,
+      category: categoryConfig.slug,
       cover_image: coverImage,
       facebook_embed_url: embedUrls.facebookEmbedUrl,
       tiktok_embed_url: embedUrls.tiktokEmbedUrl,
@@ -423,11 +454,58 @@ export async function updateManualReview(formData: FormData) {
   }
 
   revalidatePath("/");
-  revalidatePath(`/category/${categoryConfig.databaseCategory}`);
+  revalidatePath(`/category/${categoryConfig.slug}`);
   revalidatePath(`/reviews/${originalSlug}`);
   revalidatePath("/sitemap.xml");
 
   redirect(`${ADMIN_PATH}?updated=${encodeURIComponent(originalSlug)}`);
+}
+
+
+export async function saveCategory(formData: FormData) {
+  if (!isAuthenticated()) {
+    redirect(`${ADMIN_PATH}?error=session`);
+  }
+
+  const originalSlugValue = formData.get("original_slug");
+  const originalSlug = typeof originalSlugValue === "string" && originalSlugValue ? originalSlugValue : null;
+  const rawSlug = formData.get("slug");
+  const slug = originalSlug ?? (typeof rawSlug === "string" ? rawSlug.trim().toLowerCase() : "");
+  const label = readRequiredText(formData, "label", 60);
+  const seoTitle = readOptionalText(formData, "seo_title", 120);
+  const seoDescription = readOptionalText(formData, "seo_description", 300);
+  const sortRaw = formData.get("sort_order");
+  const sortOrder = typeof sortRaw === "string" ? Number.parseInt(sortRaw, 10) : Number.NaN;
+  const isActive = formData.get("is_active") === "on";
+
+  if (!isCategorySlug(slug) || !label || seoTitle === undefined || seoDescription === undefined || !Number.isInteger(sortOrder) || sortOrder < -9999 || sortOrder > 9999) {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const payload = {
+    label,
+    seo_title: seoTitle,
+    seo_description: seoDescription,
+    sort_order: sortOrder,
+    is_active: isActive,
+  };
+
+  const result = originalSlug
+    ? await supabaseAdmin.from("categories").update(payload).eq("slug", slug)
+    : await supabaseAdmin.from("categories").insert({ slug, ...payload });
+
+  if (result.error) {
+    console.error("[manual-content] Failed to save category:", result.error.message);
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/");
+  revalidatePath(`/category/${slug}`);
+  revalidatePath("/sitemap.xml");
+  revalidatePath(ADMIN_PATH);
+  redirect(`${ADMIN_PATH}?category=saved`);
 }
 
 

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "@/lib/categories";
+import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
 import PinIcon from "@/components/pin-icon";
 import ShareButton from "@/components/share-button";
 import type { Review } from "@/lib/supabase";
@@ -79,7 +79,7 @@ export default function ReviewCard({
   const badgeClass = review.category
     ? CATEGORY_BADGE_CLASS[review.category] ?? "bg-neutral-100 text-neutral-600"
     : "bg-neutral-100 text-neutral-600";
-  const label = review.category ? CATEGORY_LABEL[review.category] ?? review.category : null;
+  const label = review.category ? review.category_label ?? defaultCategoryLabel(review.category) : null;
   const href = `/reviews/${review.slug}`;
   const canonicalUrl = `${SITE_URL}${href}`;
   const hasGeo = review.latitude != null && review.longitude != null;

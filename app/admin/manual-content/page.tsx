@@ -11,6 +11,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { loginAdmin, loginAdminWithEmail, logoutAdmin } from "./actions";
 import { ManualContentForm, type EditableManualReview } from "./manual-content-form";
 import { DeleteReviewButton } from "./delete-review-button";
+import { CategoryManager, type ManagedCategory } from "./category-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; deleted?: string; edit?: string; error?: string };
+  searchParams: { created?: string; updated?: string; deleted?: string; category?: string; edit?: string; error?: string };
 }
 
 interface ManualReviewListItem {
@@ -57,8 +58,8 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
 
   return {
     slug: data.slug,
-    category: data.category === "trip" ? "attraction" : "restaurant",
-    placeName: data.title.replace(/ \| Suphan Buri (restaurants|attractions)$/i, ""),
+    category: data.category ?? "food",
+    placeName: data.title.replace(/\s+\|\s+[^|]+$/, ""),
     reviewContent: data.description ?? "",
     referenceUrl: data.tiktok_embed_url ?? data.facebook_embed_url ?? "",
     imageUrl: data.cover_image ?? "",
@@ -82,6 +83,21 @@ async function getRecentReviews(): Promise<ManualReviewListItem[]> {
   }
 
   return data ?? [];
+}
+
+async function getManagedCategories(): Promise<ManagedCategory[]> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("categories")
+    .select("slug, label, seo_title, seo_description, sort_order, is_active")
+    .order("sort_order", { ascending: true })
+    .order("label", { ascending: true });
+
+  if (error) {
+    console.error("[manual-content] Failed to load categories:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as ManagedCategory[];
 }
 
 export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
@@ -183,9 +199,10 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
     );
   }
 
-  const [editReview, recentReviews] = await Promise.all([
+  const [editReview, recentReviews, categories] = await Promise.all([
     searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
     getRecentReviews(),
+    getManagedCategories(),
   ]);
 
   return (
@@ -218,6 +235,11 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
           ลบออกจากหน้าเว็บแล้ว — ข้อมูลถูกเก็บไว้ในฐานข้อมูลเพื่อความปลอดภัย
         </div>
       )}
+      {searchParams.category && (
+        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
+          บันทึกหมวดหมู่เรียบร้อยแล้ว
+        </div>
+      )}
       {searchParams.edit && !editReview && (
         <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           ไม่พบรายการ Manual ที่ต้องการแก้ไข
@@ -240,7 +262,9 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         key ตัวนี้ การกดลิงก์ "แก้ไข" จากหน้าเดิม (Next.js client-side navigation ไม่ reload หน้า) จะทำให้
         ฟอร์มค้างค่าง่างเดิม/ว่างเปล่า ดูเหมือนฟีเจอร์แก้ไขใช้งานไม่ได้ทั้งที่ข้อมูลจริงถูกโหลดมาแล้ว
       */}
-      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} />
+      <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} categories={categories} />
+
+      <CategoryManager categories={categories} />
 
       <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
         <h2 className="text-lg font-extrabold">รีวิวล่าสุด (แก้ไขได้ทุกรายการ)</h2>

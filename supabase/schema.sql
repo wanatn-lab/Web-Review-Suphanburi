@@ -9,7 +9,7 @@ create table if not exists public.reviews (
   content          text,
   caption          text,              -- raw caption pulled from the Facebook post
   cover_image      text,
-  category         text not null check (category in ('food','cafe','trip','stay','market')),
+  category         text not null references public.categories(slug) on update cascade on delete restrict,
   source           text not null default 'facebook_auto'
                    check (source in ('facebook_auto','manual')),
   facebook_embed_url text,

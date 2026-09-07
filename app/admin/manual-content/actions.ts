@@ -249,7 +249,7 @@ export async function importCaptionDraft(
 const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
 const TRANSCRIPTION_BUCKET = "review-media";
 const TRANSCRIPTION_PATH_PREFIX = "transcription/";
-export type TranscriptionUploadTicket = { status: "error"; message: string } | { status: "success"; path: string; token: string };
+export type TranscriptionUploadTicket = { status: "error"; message: string } | { status: "success"; path: string; signedUrl: string };
 
 function isSupportedMediaUpload(fileName: string, contentType: string): boolean {
   const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
@@ -267,7 +267,7 @@ export async function prepareTranscriptionUpload(fileName: string, contentType: 
     console.error("[manual-content] Failed to create upload URL:", error?.message);
     return { status: "error", message: "เตรียมพื้นที่อัปโหลดไม่สำเร็จ กรุณาลองใหม่" };
   }
-  return { status: "success", path: data.path, token: data.token };
+  return { status: "success", path: data.path, signedUrl: data.signedUrl };
 }
 
 export async function transcribeStoredVideo(path: string): Promise<TranscribeUploadState> {

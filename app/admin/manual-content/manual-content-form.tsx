@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { supabase } from "@/lib/supabase";
 import {
   createManualReview,
   importCaptionDraft,
@@ -190,10 +189,15 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
         setTranscribeState(ticket);
         return;
       }
-      const { error: uploadError } = await supabase.storage.from("review-media").uploadToSignedUrl(ticket.path, ticket.token, transcriptionFile, {
-        contentType: transcriptionFile.type || undefined,
+      const uploadResponse = await fetch(ticket.signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": transcriptionFile.type || "application/octet-stream",
+          "x-upsert": "false",
+        },
+        body: transcriptionFile,
       });
-      if (uploadError) {
+      if (!uploadResponse.ok) {
         setTranscribeState({ status: "error", message: "อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่" });
         return;
       }

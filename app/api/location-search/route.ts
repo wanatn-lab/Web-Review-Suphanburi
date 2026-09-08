@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, isAdminSessionValid } from "@/lib/admin-auth";
+import { getGeocodingApiKey } from "@/lib/geocoding";
 
 const ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json";
 const MAX_RESULTS = 5;
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "คำค้นหาต้องมี 3–160 ตัวอักษร" }, { status: 400 });
   }
 
-  const apiKey = process.env.GEOCODING_API_KEY;
+  const apiKey = getGeocodingApiKey();
   if (!apiKey) {
     return NextResponse.json({ error: "ยังไม่ได้ตั้งค่า GEOCODING_API_KEY" }, { status: 503 });
   }

@@ -68,6 +68,38 @@ test("generateSeoCopy returns null when Cloudflare reports success: false", asyn
   assert.equal(result, null);
 });
 
+test("generateSeoCopy handles a content-block array response instead of throwing (bug fix)", async () => {
+  // Regression test for the production bug: "generateSeoCopy threw: e.match
+  // is not a function". Cloudflare returned `result.response` as an
+  // OpenAI-style array of content parts instead of a plain string.
+  const modelReply = [{ type: "text", text: '{"title": "ร้านทดสอบ สุพรรณบุรี", "description": "คำโปรยจากอาเรย์"}' }];
+  const result = await withFetchResponse(
+    { success: true, result: { response: modelReply } },
+    200,
+    () => generateSeoCopy(baseInput)
+  );
+  assert.deepEqual(result, { title: "ร้านทดสอบ สุพรรณบุรี", description: "คำโปรยจากอาเรย์" });
+});
+
+test("generateSeoCopy handles an object-wrapped response instead of throwing (bug fix)", async () => {
+  const modelReply = { content: '{"title": "ร้านทดสอบ สุพรรณบุรี", "description": "คำโปรยจากอ็อบเจกต์"}' };
+  const result = await withFetchResponse(
+    { success: true, result: { response: modelReply } },
+    200,
+    () => generateSeoCopy(baseInput)
+  );
+  assert.deepEqual(result, { title: "ร้านทดสอบ สุพรรณบุรี", description: "คำโปรยจากอ็อบเจกต์" });
+});
+
+test("generateSeoCopy returns null (not a throw) for a response shape it can't extract text from", async () => {
+  const result = await withFetchResponse(
+    { success: true, result: { response: 12345 } },
+    200,
+    () => generateSeoCopy(baseInput)
+  );
+  assert.equal(result, null);
+});
+
 test("generateSeoCopy returns null instead of throwing on a network error", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => {

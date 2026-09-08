@@ -18,9 +18,16 @@ const TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const REQUEST_TIMEOUT_MS = 25_000;
 const MAX_SOURCE_TEXT_CHARS = 6_000; // matches the review_content field's own cap
 
+// `response` is typed `unknown` on purpose: Cloudflare's docs say it's a
+// plain string, but in production this has been observed to sometimes come
+// back as something else (an object/array shape), which used to make
+// parseModelJson() call `.match()` on a non-string and throw
+// "e.match is not a function" -- see extractResponseText() below, which was
+// added specifically to stop trusting that field's type and handle it
+// defensively instead.
 interface LlamaResponse {
   success?: boolean;
-  result?: { response?: string };
+  result?: { response?: unknown };
   errors?: { message: string }[];
 }
 
@@ -71,11 +78,54 @@ function buildPrompt({ categoryLabel, placeName, caption, transcript }: SeoCopyI
   ].join("\n");
 }
 
+/** Bug fix (Sep 2026): production logs showed generateSeoCopy silently
+ *  failing on every call with "generateSeoCopy threw: e.match is not a
+ *  function" -- meaning every review saved through the admin form was
+ *  falling back to the plain keyword-template description instead of the
+ *  AI-written one. Root cause: parseModelJson() called `.match()` straight
+ *  on `payload.result.response` assuming it was always a string, but
+ *  Cloudflare can return that field as something else (an array of content
+ *  parts, or an object wrapper) rather than a plain string. Calling
+ *  `.match()` on a non-string throws immediately.
+ *
+ *  Fix: pull the actual text out of whatever shape comes back *before*
+ *  trying to find a JSON block in it, instead of assuming it's a string. */
+function extractResponseText(raw: unknown): string | null {
+  if (typeof raw === "string") return raw;
+
+  if (Array.isArray(raw)) {
+    // OpenAI-style content-block array, e.g. [{ type: "text", text: "..." }]
+    const joined = raw
+      .map((part) => (typeof part === "string" ? part : (part as { text?: unknown })?.text))
+      .filter((part): part is string => typeof part === "string")
+      .join("");
+    return joined || null;
+  }
+
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.text === "string") return obj.text;
+    if (typeof obj.content === "string") return obj.content;
+    // Last resort: stringify the object so the JSON-block regex below still
+    // has a chance of finding an embedded {"title": ..., "description": ...}.
+    try {
+      return JSON.stringify(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 /** Pulls the first {...} block out of the model's reply and parses it -- Llama
  *  instruction models sometimes wrap JSON in a sentence or code fence even
  *  when told not to, so this is more forgiving than JSON.parse(raw) directly. */
-function parseModelJson(raw: string): GeneratedSeoCopy | null {
-  const match = raw.match(/\{[\s\S]*\}/);
+function parseModelJson(raw: unknown): GeneratedSeoCopy | null {
+  const text = extractResponseText(raw);
+  if (!text) return null;
+
+  const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
 
   try {

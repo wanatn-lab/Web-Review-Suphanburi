@@ -3,18 +3,36 @@ import { notFound } from "next/navigation";
 import { getReviewsByCategory } from "@/lib/supabase";
 import { getCategoryBySlug } from "@/lib/categories";
 import ReviewCard from "@/components/review-card";
+import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 
 export const revalidate = 60;
 interface PageProps { params: { category: string }; }
 
+// SEO fix (Sep 2026): this fallback description used to always append the
+// fixed suffix "| ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี" to EVERY category
+// -- wrong keywords for a non-food/trip category like ตลาด, ที่พัก, or
+// คาเฟ่ -- and had no length cap at all. Same class of bug as the one fixed
+// on review pages in PR #14, just in this file. Fix: the keyword suffix now
+// matches the category itself, and the whole description goes through the
+// same buildMetaDescription() helper (lib/seo-text.ts) so it never exceeds
+// MAX_META_DESCRIPTION_LENGTH. An admin-provided category.seo_description is
+// used exactly as entered -- it isn't the templated fallback this bug was
+// about, so it's left untouched.
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const category = await getCategoryBySlug(params.category);
   if (!category) return { title: "ไม่พบหมวดหมู่นี้", robots: { index: false, follow: true } };
   const label = category.label;
+  const description =
+    category.seo_description?.trim() ||
+    buildMetaDescription(
+      `รวมรีวิว${label}สุพรรณบุรี พร้อมคลิปวิดีโอจาก Facebook และ TikTok อัปเดตล่าสุด`,
+      `${label}สุพรรณบุรี, รีวิวสุพรรณบุรี`,
+      MAX_META_DESCRIPTION_LENGTH
+    );
   return {
     alternates: { canonical: `/category/${category.slug}` },
     title: category.seo_title?.trim() || `${label}สุพรรณบุรี รวมรีวิวล่าสุด`,
-    description: category.seo_description?.trim() || `รวมรีวิว${label}สุพรรณบุรี พร้อมคลิปวิดีโอจาก Facebook และ TikTok อัปเดตล่าสุด | ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี`,
+    description,
   };
 }
 

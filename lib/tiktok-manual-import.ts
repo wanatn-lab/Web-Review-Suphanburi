@@ -51,7 +51,53 @@ function validHttpsUrl(value: string | undefined): string {
   }
 }
 
-/** Gets an editable draft from TikTok's public oEmbed metadata. */
+/**
+ * Fallback for when TikTok's oEmbed endpoint returns an empty/short `title`
+ * (this has become common -- oEmbed no longer reliably echoes the full
+ * caption for many videos). Scrapes the public video page's own embedded
+ * JSON (the same data TikTok's web app hydrates from) for the real
+ * description. Returns null on any failure so the caller can fall back to
+ * the oEmbed-only error message instead of throwing a confusing one.
+ */
+async function fetchCaptionFromVideoPage(sourceUrl: URL): Promise<string | null> {
+  try {
+    const response = await fetch(sourceUrl.toString(), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        Accept: "text/html",
+        // TikTok's server-rendered HTML (with the hydration JSON below) is
+        // only served to requests that look like a browser; without a UA it
+        // falls back to a near-empty shell.
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      },
+    });
+    if (!response.ok) return null;
+
+    const html = await response.text();
+    const match = html.match(
+      /<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/
+    );
+    if (!match) return null;
+
+    const data = JSON.parse(match[1]) as {
+      __DEFAULT_SCOPE__?: { "webapp.video-detail"?: { itemInfo?: { itemStruct?: { desc?: string } } } };
+};
+    const desc = data.__DEFAULT_SCOPE__?.["webapp.video-detail"]?.itemInfo?.itemStruct?.desc;
+    return desc ? cleanText(desc) : null;
+} catch (error) {
+    console.warn(
+      "[tiktok-manual-import] Video-page caption fallback failed:",
+      error instanceof Error ? error.message : error
+    );
+    return null;
+}
+}
+
+/** Gets an editable draft from TikTok's public oEmbed metadata, falling back
+ *  to scraping the video page itself when oEmbed doesn't return a caption
+ *  (increasingly common -- oEmbed's `title` field often comes back empty). */
 export async function importTikTokPostDraft(rawUrl: string): Promise<TikTokImportDraft> {
   const sourceUrl = isTikTokUrl(rawUrl);
   if (!sourceUrl) {
@@ -77,11 +123,14 @@ export async function importTikTokPostDraft(rawUrl: string): Promise<TikTokImpor
     throw new Error("TikTok ไม่คืนข้อมูลของลิงก์นี้ อาจเป็นวิดีโอส่วนตัว ถูกลบ หรือจำกัดการเข้าถึง");
   }
 
-  const caption = cleanText(payload.title);
+let caption = cleanText(payload.title);
   if (!caption) {
-    throw new Error("TikTok ไม่คืนข้อความสำหรับวิดีโอนี้ กรุณาวางแคปชั่นด้วยตัวเอง");
+      caption = cleanText((await fetchCaptionFromVideoPage(sourceUrl)) ?? "");
   }
-
+  if (!caption) {
+      throw new Error("TikTok ไม่คืนข้อความสำหรับวิดีโอนี้ กรุณาวางแคปชั่นด้วยตัวเอง");
+  }
+  
   const category = guessCategory(caption) === "trip" ? "attraction" : "restaurant";
   const location = extractLocationFromCaption(caption) ?? "สุพรรณบุรี";
   const id = sourceUrl.pathname.split("/").filter(Boolean).at(-1) ?? "tiktok";

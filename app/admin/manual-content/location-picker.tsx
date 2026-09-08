@@ -32,7 +32,7 @@ export function LocationPicker({
     startTransition(async () => {
       const result = await searchMapLocations(query);
       if ("error" in result) {
-        setNotice(result.error);
+        setNotice(result.error ?? "ค้นหาสถานที่ไม่สำเร็จ");
         return;
       }
       setResults(result.results);

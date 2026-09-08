@@ -50,6 +50,23 @@ export type CaptionImportState =
   | { status: "error"; message: string }
   | { status: "success"; draft: CaptionDraft };
 
+function readSelectedCoordinates(formData: FormData): { lat: number; lng: number } | null | undefined {
+  const rawLatitude = formData.get("latitude");
+  const rawLongitude = formData.get("longitude");
+  const latitude = typeof rawLatitude === "string" ? rawLatitude.trim() : "";
+  const longitude = typeof rawLongitude === "string" ? rawLongitude.trim() : "";
+
+  // Empty means no map result was selected; the legacy server-side lookup may
+  // still resolve a specific address. One empty value or an invalid point is an error.
+  if (!latitude && !longitude) return null;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return undefined;
+  }
+  return { lat, lng };
+}
+
 function readRequiredText(formData: FormData, key: string, maxLength: number): string | null {
   const value = formData.get(key);
   if (typeof value !== "string") return null;
@@ -343,8 +360,10 @@ export async function createManualReview(formData: FormData) {
   const address = readRequiredText(formData, "address", 500);
   const referenceUrl = readOptionalUrl(formData, "reference_url");
   const imageUrl = readOptionalUrl(formData, "image_url");
+  const selectedCoordinates = readSelectedCoordinates(formData);
 
   if (
+    selectedCoordinates === undefined ||
     !category ||
     !placeName ||
     !reviewContent ||
@@ -380,7 +399,7 @@ export async function createManualReview(formData: FormData) {
   }
 
   const slug = existingSlug ? `${seo.slugBase}-${randomUUID().slice(0, 8)}` : seo.slugBase;
-  const coordinates = await geocodeLocation(address);
+  const coordinates = selectedCoordinates ?? await geocodeLocation(address);
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราว (TikTok/Facebook) มาเก็บถาวรที่ Supabase Storage
   // กันปัญหาลิงก์หมดอายุ (ดูรายละเอียดใน lib/cover-image-mirror.ts) — ถ้ามิเรอร์
   // ไม่สำเร็จจะได้ imageUrl เดิมกลับมาแทน ไม่ทำให้บันทึกรีวิวล้มเหลว
@@ -574,8 +593,10 @@ export async function updateManualReview(formData: FormData) {
   const address = readRequiredText(formData, "address", 500);
   const referenceUrl = readOptionalUrl(formData, "reference_url");
   const imageUrl = readOptionalUrl(formData, "image_url");
+  const selectedCoordinates = readSelectedCoordinates(formData);
 
   if (
+    selectedCoordinates === undefined ||
     !originalSlug ||
     !category ||
     !placeName ||
@@ -594,7 +615,7 @@ export async function updateManualReview(formData: FormData) {
     redirect(`${ADMIN_PATH}?error=validation`);
   }
   const seo = await createEnhancedSeoContent(categoryConfig, placeName, reviewContent);
-  const coordinates = await geocodeLocation(address);
+  const coordinates = selectedCoordinates ?? await geocodeLocation(address);
   const embedUrls = embedUrlsForReference(referenceUrl);
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราวมาเก็บถาวรที่ Supabase Storage เหมือนตอนสร้าง —
   // ถ้าเป็นภาพที่มิเรอร์ไว้แล้วจากรอบก่อน (ชี้มาที่ Storage ของเราเอง) จะข้ามการ

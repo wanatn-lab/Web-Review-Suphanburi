@@ -21,6 +21,11 @@ const GEOCODE_ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json";
 /** timeout กัน Google ค้าง แล้วลาก Route Handler ไปชน timeout ของ Vercel ทั้งเส้น */
 const GEOCODE_TIMEOUT_MS = 8000;
 
+/** Supports the original Vercel variable name while standardising new setups on GEOCODING_API_KEY. */
+export function getGeocodingApiKey(): string | null {
+  return process.env.GEOCODING_API_KEY?.trim() || process.env.Geocoding_API_Key?.trim() || null;
+}
+
 export interface GeoPoint {
   lat: number;
   lng: number;
@@ -78,7 +83,7 @@ export function extractLocationFromCaption(caption: string): string | null {
  * Geocode a free-text location. Returns null on any failure — never throws.
  */
 export async function geocodeLocation(locationText: string): Promise<GeoPoint | null> {
-  const apiKey = process.env.GEOCODING_API_KEY;
+  const apiKey = getGeocodingApiKey();
   const normalizedLocation = locationText.trim();
   // A province-only query resolves to a generic centroid, never a storefront.
   if (!apiKey || !normalizedLocation || GENERIC_SUPHANBURI_LOCATION.test(normalizedLocation)) return null;
@@ -144,7 +149,7 @@ export async function geocodeLocation(locationText: string): Promise<GeoPoint | 
 
 /** ตั้งค่า GEOCODING_API_KEY ไว้หรือยัง — ให้ฝั่งที่เรียกใช้ข้าม loop ทั้งก้อนได้ถ้ายังไม่ได้ตั้ง */
 export function isGeocodingEnabled(): boolean {
-  return Boolean(process.env.GEOCODING_API_KEY);
+  return getGeocodingApiKey() !== null;
 }
 
 /**

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getReviewsByCategory } from "@/lib/supabase";
 import { getCategoryBySlug } from "@/lib/categories";
 import ReviewCard from "@/components/review-card";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = { probperty: "property" };
 
 export const revalidate = 60;
 interface PageProps { params: { category: string }; }
@@ -21,6 +22,8 @@ interface PageProps { params: { category: string }; }
 // used exactly as entered -- it isn't the templated fallback this bug was
 // about, so it's left untouched.
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const redirectedSlug = LEGACY_CATEGORY_REDIRECTS[params.category];
+  if (redirectedSlug) permanentRedirect(`/category/${redirectedSlug}`);
   const category = await getCategoryBySlug(params.category);
   if (!category) return { title: "ไม่พบหมวดหมู่นี้", robots: { index: false, follow: true } };
   const label = category.label;
@@ -39,6 +42,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CategoryPage({ params }: PageProps) {
+  const redirectedSlug = LEGACY_CATEGORY_REDIRECTS[params.category];
+  if (redirectedSlug) permanentRedirect(`/category/${redirectedSlug}`);
   const category = await getCategoryBySlug(params.category);
   if (!category) notFound();
   const reviews = await getReviewsByCategory(category.slug, 24);

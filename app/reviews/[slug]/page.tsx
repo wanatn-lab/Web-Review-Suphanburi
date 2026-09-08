@@ -104,20 +104,24 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
   const hasGeo = review.latitude != null && review.longitude != null;
 
-  // โชว์วิดีโอ "ช่องทางเดียว" — เลือก Facebook ก่อนถ้ามี ไม่งั้นใช้ TikTok เพราะ
+  // โชว์วิดีโอ "ช่องทางเดียว" — เลือก Facebook ก่อน ตามด้วย TikTok หรือ YouTube เพราะ
   // ในทางปฏิบัติมีแค่ช่องทางเดียวที่ถูก sync/กรอกไว้อยู่แล้ว ต่อให้มีทั้งคู่ก็ไม่ต้อง
   // โชว์ 2 กล่อง — ไม่มีวิดีโอเลยก็ไม่ต้องมีกล่อง placeholder หลอกๆ
-  const videoProvider: "facebook" | "tiktok" | null = review.facebook_embed_url
+  const videoProvider: "facebook" | "tiktok" | "youtube" | null = review.facebook_embed_url
     ? "facebook"
     : review.tiktok_embed_url
       ? "tiktok"
-      : null;
+      : review.youtube_embed_url
+        ? "youtube"
+        : null;
   const videoUrl =
     videoProvider === "facebook"
       ? review.facebook_embed_url
       : videoProvider === "tiktok"
         ? review.tiktok_embed_url
-        : null;
+        : videoProvider === "youtube"
+          ? review.youtube_embed_url
+          : null;
 
   // ใช้ google_map_embed_url ที่เก็บไว้ก่อน ถ้าไม่มีค่อย fallback ไปสร้างจาก lat/lng
   const mapSrc =

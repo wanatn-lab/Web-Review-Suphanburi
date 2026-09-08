@@ -7,6 +7,10 @@
                   "schedule": "0 3 * * *"
           },
           {
+                  "path": "/api/sync-youtube",
+                  "schedule": "15 3 * * *"
+          },
+          {
                   "path": "/api/refresh-facebook-token",
                   "schedule": "0 4 * * 0"
           }

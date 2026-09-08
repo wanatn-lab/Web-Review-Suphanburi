@@ -11,9 +11,11 @@ create table if not exists public.reviews (
   cover_image      text,
   category         text not null references public.categories(slug) on update cascade on delete restrict,
   source           text not null default 'facebook_auto'
-                   check (source in ('facebook_auto','manual')),
+                   check (source in ('facebook_auto','youtube_auto','manual')),
   facebook_embed_url text,
   tiktok_embed_url text,
+  youtube_embed_url text,
+  youtube_video_id text unique,
   location_name    text,              -- e.g. "อ.เมือง จ.สุพรรณบุรี"
   district         text,              -- e.g. "อำเภอเมือง"
   location_lat     double precision,

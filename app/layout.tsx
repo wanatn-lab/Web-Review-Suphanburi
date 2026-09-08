@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Kanit, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
+import { getCategories } from "@/lib/categories";
 import "./globals.css";
 
 // app/layout.tsx
@@ -25,6 +26,9 @@ const notoSansThai = Noto_Sans_Thai({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
+const SITE_NAME = "รีวิวสุพรรณบุรี";
+const SITE_DESCRIPTION = "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok อัปเดตทุกสัปดาห์";
+
 // Keep the site shell independent from the database. A database/API outage must
 // never prevent the admin page, login, or public navigation from rendering.
 const NAVIGATION_CATEGORIES = [
@@ -41,20 +45,54 @@ export const metadata: Metadata = {
     default: "รีวิวสุพรรณบุรี | รวมร้านอาหาร คาเฟ่ ที่เที่ยว อัปเดตล่าสุด",
     template: "%s | รีวิวสุพรรณบุรี",
   },
-  description:
-    "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok อัปเดตทุกสัปดาห์",
+  description: SITE_DESCRIPTION,
   openGraph: {
-    siteName: "รีวิวสุพรรณบุรี",
+    siteName: SITE_NAME,
     locale: "th_TH",
     type: "website",
+    url: "/",
+    title: "รีวิวสุพรรณบุรี | รวมร้านอาหาร คาเฟ่ ที่เที่ยว อัปเดตล่าสุด",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "รีวิวสุพรรณบุรี | รวมร้านอาหาร คาเฟ่ ที่เที่ยว อัปเดตล่าสุด",
+    description: SITE_DESCRIPTION,
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const categories = NAVIGATION_CATEGORIES;
+export const revalidate = 60;
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Use the same category source as the editor and sitemap. The fallback keeps
+  // navigation available during a temporary database/API outage.
+  const categories = await getCategories();
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: SITE_NAME,
+        url: SITE_URL,
+        areaServed: { "@type": "AdministrativeArea", name: "จังหวัดสุพรรณบุรี" },
+      },
+      {
+        "@type": "WebSite",
+        name: SITE_NAME,
+        url: SITE_URL,
+        inLanguage: "th-TH",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${SITE_URL}/search?q={search_term_string}`,
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
   return (
     <html lang="th" className={`${kanit.variable} ${notoSansThai.variable}`}>
       <body className="min-h-screen bg-white font-[family-name:var(--font-noto-sans-thai)] text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-50">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <header className="sticky top-0 z-20 bg-[#DA3D0D] text-white">
           <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 sm:px-8">
             <Link

@@ -475,6 +475,143 @@ export async function createManualReview(formData: FormData) {
   redirect(`${ADMIN_PATH}?created=${encodeURIComponent(inserted.slug)}`);
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+/** Publish one reviewed YouTube import. This is deliberately separate from
+ * the cron route so a synced clip never becomes public without an editor. */
+export async function publishYouTubeImport(formData: FormData) {
+  if (!isAuthenticated()) {
+    redirect(`${ADMIN_PATH}?error=session`);
+  }
+
+  const importId = readRequiredText(formData, "youtube_import_id", 36);
+  if (!importId || !isUuid(importId)) {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: queued, error: queuedError } = await supabaseAdmin
+    .from("youtube_imports")
+    .select("id, video_id, video_url, seo_title, seo_description, category, cover_image, video_published_at, latitude, longitude, location_text")
+    .eq("id", importId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (queuedError || !queued) {
+    console.error("[manual-content] Failed to load queued YouTube import:", queuedError?.message ?? "Not found");
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+
+  const categoryConfig = await getActiveCategory(queued.category);
+  if (!categoryConfig) {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("reviews")
+    .select("slug")
+    .eq("youtube_video_id", queued.video_id)
+    .maybeSingle();
+  if (existingError) {
+    console.error("[manual-content] Failed to check published YouTube import:", existingError.message);
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+  if (existing) {
+    const { error: statusError } = await supabaseAdmin
+      .from("youtube_imports")
+      .update({ status: "published", published_review_slug: existing.slug, decided_at: new Date().toISOString() })
+      .eq("id", queued.id);
+    if (statusError) console.error("[manual-content] Failed to reconcile YouTube import:", statusError.message);
+    redirect(`${ADMIN_PATH}?youtube=published`);
+  }
+
+  const preferredSlug = `yt-${queued.video_id}`;
+  const { data: slugCollision, error: slugError } = await supabaseAdmin
+    .from("reviews")
+    .select("slug")
+    .eq("slug", preferredSlug)
+    .maybeSingle();
+  if (slugError) {
+    console.error("[manual-content] Failed to check YouTube review slug:", slugError.message);
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+  const slug = slugCollision ? `${preferredSlug}-${randomUUID().slice(0, 8)}` : preferredSlug;
+  const coverImage = await mirrorCoverImage(queued.cover_image, slug);
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from("reviews")
+    .insert({
+      title: queued.seo_title,
+      slug,
+      description: queued.seo_description,
+      category: categoryConfig.slug,
+      cover_image: coverImage,
+      facebook_embed_url: null,
+      tiktok_embed_url: null,
+      youtube_embed_url: queued.video_url,
+      google_map_embed_url: null,
+      latitude: queued.latitude,
+      longitude: queued.longitude,
+      location_text: queued.location_text,
+      facebook_post_id: null,
+      youtube_video_id: queued.video_id,
+      source: "youtube_auto",
+      created_at: queued.video_published_at,
+    })
+    .select("slug")
+    .single();
+  if (insertError || !inserted) {
+    console.error("[manual-content] Failed to publish YouTube import:", insertError?.message ?? "No row returned");
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+
+  const { error: statusError } = await supabaseAdmin
+    .from("youtube_imports")
+    .update({ status: "published", published_review_slug: inserted.slug, decided_at: new Date().toISOString() })
+    .eq("id", queued.id)
+    .eq("status", "pending");
+  if (statusError) {
+    console.error("[manual-content] Failed to mark YouTube import as published:", statusError.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/category/${categoryConfig.slug}`);
+  revalidatePath(`/reviews/${inserted.slug}`);
+  revalidatePath("/sitemap.xml");
+  revalidatePath(ADMIN_PATH);
+  redirect(`${ADMIN_PATH}?youtube=published`);
+}
+
+/** Keeps the source record for audit/deduplication while removing it from the
+ * editor queue. Rejected video IDs are never imported again. */
+export async function rejectYouTubeImport(formData: FormData) {
+  if (!isAuthenticated()) {
+    redirect(`${ADMIN_PATH}?error=session`);
+  }
+
+  const importId = readRequiredText(formData, "youtube_import_id", 36);
+  if (!importId || !isUuid(importId)) {
+    redirect(`${ADMIN_PATH}?error=validation`);
+  }
+
+  const { data, error } = await getSupabaseAdmin()
+    .from("youtube_imports")
+    .update({ status: "rejected", decided_at: new Date().toISOString() })
+    .eq("id", importId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
+    console.error("[manual-content] Failed to reject YouTube import:", error?.message ?? "Not found");
+    redirect(`${ADMIN_PATH}?error=database`);
+  }
+
+  revalidatePath(ADMIN_PATH);
+  redirect(`${ADMIN_PATH}?youtube=rejected`);
+}
+
 export async function updateManualReview(formData: FormData) {
   if (!isAuthenticated()) {
     redirect(`${ADMIN_PATH}?error=session`);

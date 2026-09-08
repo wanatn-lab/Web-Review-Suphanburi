@@ -34,6 +34,13 @@ interface PlaylistItemsResponse extends YouTubeApiError {
   }>;
 }
 
+interface VideosListResponse extends YouTubeApiError {
+  items?: Array<{
+    id?: string;
+    contentDetails?: { duration?: string };
+  }>;
+}
+
 export interface YouTubeVideo {
   id: string;
   title: string;
@@ -41,6 +48,10 @@ export interface YouTubeVideo {
   permalinkUrl: string;
   publishedAt: string;
   thumbnailUrl: string | null;
+  /** Duration from videos.list, in seconds. The public API has no definitive
+   * `isShort` attribute, so the caller should treat this as a Shorts candidate
+   * and still let an editor decide whether to publish it. */
+  durationSeconds: number;
 }
 
 function errorMessage(payload: YouTubeApiError | null, fallback: string): string {
@@ -50,6 +61,19 @@ function errorMessage(payload: YouTubeApiError | null, fallback: string): string
 function thumbnailUrl(thumbnails: YouTubeThumbnails | undefined): string | null {
   if (!thumbnails) return null;
   return thumbnails.maxres?.url ?? thumbnails.standard?.url ?? thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url ?? null;
+}
+
+/** Converts the ISO 8601 duration returned by YouTube, e.g. PT1M30S, to seconds. */
+export function durationToSeconds(duration: string | undefined): number | null {
+  if (!duration) return null;
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration);
+  if (!match) return null;
+
+  const hours = Number.parseInt(match[1] ?? "0", 10);
+  const minutes = Number.parseInt(match[2] ?? "0", 10);
+  const seconds = Number.parseInt(match[3] ?? "0", 10);
+  const total = hours * 3_600 + minutes * 60 + seconds;
+  return Number.isFinite(total) ? total : null;
 }
 
 /**
@@ -100,7 +124,7 @@ export async function fetchChannelVideos(channelId: string, apiKey: string, limi
     throw new Error(`YouTube Data API error: ${errorMessage(playlistPayload, playlistResponse.statusText)}`);
   }
 
-  return (playlistPayload.items ?? []).flatMap((item) => {
+  const videos = (playlistPayload.items ?? []).flatMap((item) => {
     const id = item.contentDetails?.videoId ?? item.snippet?.resourceId?.videoId;
     const title = item.snippet?.title?.trim();
     if (!id || !title || title === "Private video" || title === "Deleted video") return [];
@@ -113,6 +137,41 @@ export async function fetchChannelVideos(channelId: string, apiKey: string, limi
       publishedAt: item.contentDetails?.videoPublishedAt ?? item.snippet?.publishedAt ?? new Date().toISOString(),
       thumbnailUrl: thumbnailUrl(item.snippet?.thumbnails),
     }];
+  });
+
+  if (videos.length === 0) return [];
+
+  const detailsUrl = new URL(`${YOUTUBE_API_BASE}/videos`);
+  detailsUrl.searchParams.set("part", "contentDetails");
+  detailsUrl.searchParams.set("id", videos.map((video) => video.id).join(","));
+  detailsUrl.searchParams.set("key", apiKey);
+
+  let detailsResponse: Response;
+  try {
+    detailsResponse = await fetch(detailsUrl, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+  } catch {
+    throw new Error("เชื่อมต่อ YouTube Data API ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  }
+
+  const detailsPayload = (await detailsResponse.json().catch(() => null)) as VideosListResponse | null;
+  if (!detailsResponse.ok || !detailsPayload) {
+    throw new Error(`YouTube Data API error: ${errorMessage(detailsPayload, detailsResponse.statusText)}`);
+  }
+
+  const durations = new Map<string, number>();
+  for (const item of detailsPayload.items ?? []) {
+    const seconds = durationToSeconds(item.contentDetails?.duration);
+    if (item.id && seconds !== null) durations.set(item.id, seconds);
+  }
+
+  // YouTube treats eligible vertical/square uploads up to three minutes as
+  // Shorts. The public Data API only gives us duration, not a trustworthy
+  // public Shorts/portrait flag, therefore duration is the conservative
+  // machine-checkable filter and the admin queue is the final approval step.
+  return videos.flatMap((video) => {
+    const durationSeconds = durations.get(video.id);
+    if (!durationSeconds || durationSeconds > 180) return [];
+    return [{ ...video, durationSeconds }];
   });
 }
 

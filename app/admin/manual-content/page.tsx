@@ -8,7 +8,7 @@ import {
   isEmailLoginConfigured,
 } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { loginAdmin, loginAdminWithEmail, logoutAdmin } from "./actions";
+import { loginAdmin, loginAdminWithEmail, logoutAdmin, publishYouTubeImport, rejectYouTubeImport } from "./actions";
 import { ManualContentForm, type ContentCategory, type EditableManualReview } from "./manual-content-form";
 import { DeleteReviewButton } from "./delete-review-button";
 
@@ -21,13 +21,27 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; deleted?: string; category?: string; edit?: string; error?: string };
+  searchParams: { created?: string; updated?: string; deleted?: string; category?: string; edit?: string; youtube?: string; error?: string };
 }
 
 interface ManualReviewListItem {
   slug: string;
   title: string;
   location_text: string | null;
+}
+
+interface YouTubeImportListItem {
+  id: string;
+  video_url: string;
+  original_title: string;
+  seo_title: string;
+  seo_description: string;
+  category: string;
+  cover_image: string | null;
+  duration_seconds: number;
+  video_published_at: string;
+  location_text: string | null;
+  ai_generated: boolean;
 }
 
 const fallbackCategories: ContentCategory[] = [
@@ -116,6 +130,25 @@ async function getManagedCategories(): Promise<ContentCategory[]> {
   } catch (error) {
     console.error("[manual-content] Failed to load categories:", error);
     return fallbackCategories;
+  }
+}
+
+async function getPendingYouTubeImports(): Promise<YouTubeImportListItem[]> {
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("youtube_imports")
+      .select("id, video_url, original_title, seo_title, seo_description, category, cover_image, duration_seconds, video_published_at, location_text, ai_generated")
+      .eq("status", "pending")
+      .order("video_published_at", { ascending: false })
+      .limit(30);
+    if (error) {
+      console.error("[manual-content] Failed to load YouTube import queue:", error.message);
+      return [];
+    }
+    return data as YouTubeImportListItem[];
+  } catch (error) {
+    console.error("[manual-content] Failed to load YouTube import queue:", error);
+    return [];
   }
 }
 
@@ -218,10 +251,11 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
     );
   }
 
-  const [editReview, recentReviews, categories] = await Promise.all([
+  const [editReview, recentReviews, categories, pendingYouTubeImports] = await Promise.all([
     searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
     getRecentReviews(),
     getManagedCategories(),
+    getPendingYouTubeImports(),
   ]);
 
   return (
@@ -254,6 +288,16 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
           ลบออกจากหน้าเว็บแล้ว — ข้อมูลถูกเก็บไว้ในฐานข้อมูลเพื่อความปลอดภัย
         </div>
       )}
+      {searchParams.youtube === "published" && (
+        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
+          เผยแพร่คลิป YouTube แล้ว — คลิปจะแสดงบนเว็บไซต์ตามหมวดหมู่ที่ระบบเลือกไว้
+        </div>
+      )}
+      {searchParams.youtube === "rejected" && (
+        <div className="mt-6 rounded-xl border border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-700">
+          ไม่นำคลิปนี้ขึ้นเว็บแล้ว ระบบจะไม่ดึงคลิปเดิมกลับมาเข้าคิวอีก
+        </div>
+      )}
       {searchParams.category && (
         <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
           บันทึกหมวดหมู่เรียบร้อยแล้ว
@@ -282,6 +326,58 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         ฟอร์มค้างค่าง่างเดิม/ว่างเปล่า ดูเหมือนฟีเจอร์แก้ไขใช้งานไม่ได้ทั้งที่ข้อมูลจริงถูกโหลดมาแล้ว
       */}
       <ManualContentForm key={editReview?.slug ?? "new"} initialReview={editReview} categories={categories} />
+
+      <section className="mt-8 rounded-2xl border border-[#DA3D0D]/30 bg-[#FFF8F5] p-5 dark:border-[#DA3D0D]/50 dark:bg-neutral-900">
+        <h2 className="text-lg font-extrabold">คิวคลิป YouTube Shorts</h2>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+          ระบบดึงเฉพาะคลิปความยาวไม่เกิน 3 นาที สร้างชื่อ/คำอธิบาย SEO และพิกัด GEO เป็นร่างให้แล้ว แต่จะไม่ขึ้นเว็บจนกว่าจะกดเผยแพร่
+        </p>
+        <p className="mt-2 text-xs text-neutral-500">
+          กรุณาตรวจว่าเป็นคลิปแนวตั้งหรือสี่เหลี่ยมจัตุรัสจริงก่อนเผยแพร่ เนื่องจาก YouTube Data API ไม่มีสถานะ Shorts ที่ยืนยันได้โดยตรงสำหรับคลิปสาธารณะ
+        </p>
+        {pendingYouTubeImports.length === 0 ? (
+          <p className="mt-4 text-sm text-neutral-500">ยังไม่มีคลิปที่รอตรวจ หรือยังไม่ได้สั่งซิงก์จาก YouTube</p>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {pendingYouTubeImports.map((item) => (
+              <li key={item.id} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+                <div className="flex gap-3">
+                  {item.cover_image && (
+                    // YouTube serves a mutable thumbnail URL; a plain image keeps the moderation screen responsive.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.cover_image} alt="" className="h-24 w-16 rounded-lg object-cover" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <a href={item.video_url} target="_blank" rel="noreferrer" className="font-bold text-[#B62F08] underline">
+                      {item.original_title}
+                    </a>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {item.duration_seconds} วินาที · {item.category} · {item.ai_generated ? "SEO สร้างด้วย AI" : "SEO แบบแม่แบบ"}
+                      {item.location_text ? ` · GEO: ${item.location_text}` : " · ยังไม่พบพิกัด"}
+                    </p>
+                    <p className="mt-3 text-sm font-semibold">ชื่อที่จะเผยแพร่: {item.seo_title}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-neutral-600 dark:text-neutral-300">{item.seo_description}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <form action={publishYouTubeImport}>
+                    <input type="hidden" name="youtube_import_id" value={item.id} />
+                    <button type="submit" className="rounded-xl bg-[#DA3D0D] px-4 py-2 text-sm font-bold text-white hover:bg-[#B62F08]">
+                      เผยแพร่ขึ้นเว็บ
+                    </button>
+                  </form>
+                  <form action={rejectYouTubeImport}>
+                    <input type="hidden" name="youtube_import_id" value={item.id} />
+                    <button type="submit" className="rounded-xl border border-neutral-300 px-4 py-2 text-sm font-bold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800">
+                      ไม่เอาคลิปนี้
+                    </button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
         <h2 className="text-lg font-extrabold">จัดการหมวดหมู่</h2>

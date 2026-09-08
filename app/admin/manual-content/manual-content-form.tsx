@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LocationPicker } from "./location-picker";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createManualReview,
@@ -337,20 +338,11 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
           <p className="mt-1 text-xs text-neutral-500">ตรวจ URL รูปก่อนบันทึก หากต้นทางไม่คืนรูปหน้าปก ให้ใส่ URL รูปเอง</p>
         </div>
 
-        <div>
-          <label htmlFor="address" className="text-sm font-semibold">ที่อยู่ / พื้นที่</label>
-          <textarea
-            id="address"
-            name="address"
-            required
-            maxLength={500}
-            rows={3}
-            className={inputClass}
-            value={values.address}
-            onChange={(event) => updateValue("address", event.target.value)}
-          />
-          <p className="mt-1 text-xs text-neutral-500">ระบบใช้ข้อความนี้หาพิกัดสำหรับ GEO หากตั้งค่า GEOCODING_API_KEY แล้ว</p>
-        </div>
+        <LocationPicker
+          value={values.address}
+          onChange={(address) => updateValue("address", address)}
+          inputClass={inputClass}
+        />
 
         <button type="submit" className="w-full rounded-xl bg-[#DA3D0D] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]">
           {isEditing ? "บันทึกการแก้ไข" : "บันทึกและเผยแพร่"}

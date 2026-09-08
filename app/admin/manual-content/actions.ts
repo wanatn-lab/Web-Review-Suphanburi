@@ -101,6 +101,8 @@ function isSupportedImageUrl(value: string | null): boolean {
       hostname.endsWith(".tiktokcdn.com") ||
       hostname.endsWith(".tiktokcdn-us.com") ||
       hostname.endsWith(".muscdn.com") ||
+      hostname === "i.ytimg.com" ||
+      hostname === "img.youtube.com" ||
       (ownSupabaseHostname !== null && hostname === ownSupabaseHostname))
   );
 }
@@ -112,10 +114,21 @@ function isTikTokUrl(value: string | null): boolean {
   return hostname === "tiktok.com" || hostname.endsWith(".tiktok.com");
 }
 
+function isYouTubeUrl(value: string | null): boolean {
+  if (!value) return false;
+
+  const hostname = new URL(value).hostname.toLowerCase().replace(/^www\./, "");
+  return hostname === "youtu.be" || hostname.endsWith("youtube.com");
+}
+
 function embedUrlsForReference(referenceUrl: string | null) {
-  return isTikTokUrl(referenceUrl)
-    ? { facebookEmbedUrl: null, tiktokEmbedUrl: referenceUrl }
-    : { facebookEmbedUrl: referenceUrl, tiktokEmbedUrl: null };
+  if (isTikTokUrl(referenceUrl)) {
+    return { facebookEmbedUrl: null, tiktokEmbedUrl: referenceUrl, youtubeEmbedUrl: null };
+  }
+  if (isYouTubeUrl(referenceUrl)) {
+    return { facebookEmbedUrl: null, tiktokEmbedUrl: null, youtubeEmbedUrl: referenceUrl };
+  }
+  return { facebookEmbedUrl: referenceUrl, tiktokEmbedUrl: null, youtubeEmbedUrl: null };
 }
 
 async function resolveCoverImage(imageUrl: string | null, referenceUrl: string | null): Promise<string | null> {
@@ -436,11 +449,13 @@ export async function createManualReview(formData: FormData) {
       cover_image: coverImage,
       facebook_embed_url: embedUrls.facebookEmbedUrl,
       tiktok_embed_url: embedUrls.tiktokEmbedUrl,
+      youtube_embed_url: embedUrls.youtubeEmbedUrl,
       google_map_embed_url: null,
       latitude: coordinates?.lat ?? null,
       longitude: coordinates?.lng ?? null,
       location_text: address,
       facebook_post_id: null,
+      youtube_video_id: null,
       source: "manual",
       created_at: createdAt,
     })
@@ -513,6 +528,7 @@ export async function updateManualReview(formData: FormData) {
       cover_image: coverImage,
       facebook_embed_url: embedUrls.facebookEmbedUrl,
       tiktok_embed_url: embedUrls.tiktokEmbedUrl,
+      youtube_embed_url: embedUrls.youtubeEmbedUrl,
       latitude: coordinates?.lat ?? null,
       longitude: coordinates?.lng ?? null,
       location_text: address,

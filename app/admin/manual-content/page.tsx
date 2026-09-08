@@ -56,7 +56,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
   // ต้องแก้ไขได้จากหน้านี้เช่นกัน ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง (source: "manual")
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
-    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, location_text")
+    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, location_text")
     .is("deleted_at", null)
     .eq("slug", slug)
     .maybeSingle();
@@ -71,7 +71,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
     category: data.category ?? "food",
     placeName: data.title.replace(/\s+\|\s+[^|]+$/, ""),
     reviewContent: data.description ?? "",
-    referenceUrl: data.tiktok_embed_url ?? data.facebook_embed_url ?? "",
+    referenceUrl: data.tiktok_embed_url ?? data.youtube_embed_url ?? data.facebook_embed_url ?? "",
     imageUrl: data.cover_image ?? "",
     address: data.location_text ?? "สุพรรณบุรี",
   };

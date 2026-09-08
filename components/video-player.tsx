@@ -12,12 +12,32 @@ import { useEffect, useState } from "react";
 // ปิดได้ 3 ทาง: กดปุ่ม X, กดปุ่ม Escape, หรือคลิกพื้นหลังสีดำรอบวิดีโอ
 // ล็อกการเลื่อนหน้าเว็บด้านหลัง (body scroll) ไว้ตอนเปิดเต็มจอ
 
-type Provider = "facebook" | "tiktok";
+type Provider = "facebook" | "tiktok" | "youtube";
+
+function youtubeVideoId(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    const candidate =
+      hostname === "youtu.be"
+        ? url.pathname.split("/").filter(Boolean)[0]
+        : hostname.endsWith("youtube.com")
+          ? url.searchParams.get("v") ?? url.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/)?.[1]
+          : null;
+    return candidate && /^[A-Za-z0-9_-]{11}$/.test(candidate) ? candidate : null;
+  } catch {
+    return null;
+  }
+}
 
 function buildEmbedSrc(provider: Provider, url: string): string | null {
   if (provider === "facebook") {
     const encoded = encodeURIComponent(url);
     return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&autoplay=true`;
+  }
+  if (provider === "youtube") {
+    const id = youtubeVideoId(url);
+    return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0` : null;
   }
   // TikTok: ดึง video id จาก URL แล้วต่อเป็น embed v2 (ไม่ต้องโหลด widget.js ที่หนัก)
   const match = url.match(/video\/(\d+)/);
@@ -47,6 +67,8 @@ export function VideoPlayer({
 }) {
   const [open, setOpen] = useState(false);
   const embedSrc = buildEmbedSrc(provider, url);
+  const isYouTube = provider === "youtube";
+  const playerSize = isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-sm sm:max-w-md";
 
   // ล็อก scroll ของ body ตอนเปิดเต็มจอ + รองรับปิดด้วยปุ่ม Escape
   useEffect(() => {
@@ -76,7 +98,7 @@ export function VideoPlayer({
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-label={`เล่นวิดีโอรีวิว: ${title}`}
-        className="group relative mx-auto block aspect-[9/16] w-full max-w-sm overflow-hidden rounded-2xl bg-neutral-900 shadow-lg sm:max-w-md"
+        className={`group relative mx-auto block w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ${playerSize}`}
       >
         {poster ? (
           // ภาพปกจริงจาก TikTok/Facebook — ไม่ใช้ next/image เพราะเป็น URL ที่หมดอายุได้
@@ -121,14 +143,14 @@ export function VideoPlayer({
 
           <div className="flex flex-1 flex-col overflow-y-auto overscroll-contain">
             <div
-              className="relative mx-auto aspect-[9/16] w-full max-w-md flex-shrink-0 bg-neutral-900"
+              className={`relative mx-auto w-full flex-shrink-0 bg-neutral-900 ${isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-md"}`}
               onClick={(event) => event.stopPropagation()}
             >
               <iframe
                 src={embedSrc}
                 title={`วิดีโอรีวิวเต็มจอ: ${title}`}
                 className="absolute inset-0 h-full w-full border-0"
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 referrerPolicy="strict-origin-when-cross-origin"
               />

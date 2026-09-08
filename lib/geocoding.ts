@@ -48,19 +48,19 @@ const DISTRICT_PATTERNS: { canonical: string; aliases: string[] }[] = [
   { canonical: "อู่ทอง สุพรรณบุรี", aliases: ["อู่ทอง"] },
 ];
 
-/** ถ้าไม่เจออำเภอไหนเลย — ปักหมุดระดับจังหวัดไว้ก่อน ดีกว่าไม่มีหมุดเลย */
-const PROVINCE_FALLBACK = "สุพรรณบุรี";
+/** ห้ามใช้ชื่อจังหวัดอย่างเดียวเป็นพิกัด: ผลลัพธ์จะเป็นจุดกึ่งกลางจังหวัด ไม่ใช่ร้านจริง */
+const GENERIC_SUPHANBURI_LOCATION = /^(?:จังหวัด)?สุพรรณบุรี(?:\s+ประเทศไทย)?$/u;
 
 /**
  * ถอด "ชื่ออำเภอ" ออกจากแคปชั่น แล้วคืนเป็นวลีเต็มที่พร้อมส่งเข้า Geocoding
  * เช่น "ร้านนี้อยู่ อ.เมือง นะ" -> "อำเภอเมืองสุพรรณบุรี"
- * ถ้าไม่เจออำเภอไหนเลย fallback เป็น "สุพรรณบุรี" (ระดับจังหวัด)
+ * ถ้าไม่เจออำเภอที่ชัดเจน ให้คืน null เพื่อไม่สร้างหมุดระดับจังหวัดที่ทำให้ข้อมูล GEO ผิด
  *
  * Extract a Suphanburi district name from a caption and return the full search
- * phrase. Falls back to the province name when nothing matches.
+ * phrase. Returns null when no district can be identified.
  */
 export function extractLocationFromCaption(caption: string): string | null {
-  if (!caption) return PROVINCE_FALLBACK;
+  if (!caption) return null;
 
   for (const { canonical, aliases } of DISTRICT_PATTERNS) {
     if (aliases.some((alias) => caption.includes(alias))) {
@@ -68,7 +68,7 @@ export function extractLocationFromCaption(caption: string): string | null {
     }
   }
 
-  return PROVINCE_FALLBACK;
+  return null;
 }
 
 /**
@@ -79,13 +79,15 @@ export function extractLocationFromCaption(caption: string): string | null {
  */
 export async function geocodeLocation(locationText: string): Promise<GeoPoint | null> {
   const apiKey = process.env.GEOCODING_API_KEY;
-  if (!apiKey || !locationText.trim()) return null;
+  const normalizedLocation = locationText.trim();
+  // A province-only query resolves to a generic centroid, never a storefront.
+  if (!apiKey || !normalizedLocation || GENERIC_SUPHANBURI_LOCATION.test(normalizedLocation)) return null;
 
   try {
     const url = new URL(GEOCODE_ENDPOINT);
     // ต่อท้าย "จังหวัดสุพรรณบุรี ประเทศไทย" เสมอ กัน Google ไปเจอชื่อซ้ำในจังหวัดอื่น
     // (เช่น "สองพี่น้อง" มีในหลายจังหวัด) — บีบผลลัพธ์ให้อยู่ในพื้นที่ที่เรารีวิวจริง
-    url.searchParams.set("address", `${locationText} จังหวัดสุพรรณบุรี ประเทศไทย`);
+    url.searchParams.set("address", `${normalizedLocation} จังหวัดสุพรรณบุรี ประเทศไทย`);
     url.searchParams.set("key", apiKey);
     url.searchParams.set("language", "th");
     url.searchParams.set("region", "TH");

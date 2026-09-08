@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getReviewBySlug } from "@/lib/supabase";
 import { defaultCategoryLabel } from "@/lib/categories";
 import { VideoPlayer } from "@/components/video-player";
+import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 
 // app/reviews/[slug]/page.tsx
 // Review Detail Page — Server Component (SSR), Dynamic Route.
@@ -18,55 +19,78 @@ import { VideoPlayer } from "@/components/video-player";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 
+// SEO fix (Sep 2026): app/layout.tsx already defines `title.template =
+// "%s | รีวิวสุพรรณบุรี"`, which Next.js applies automatically to every
+// page's `metadata.title`. This file used to build `title` as
+// `${review.title} | ${SITE_NAME}` itself, so the template appended the
+// site name a *second* time -> "...ชื่อรีวิว | รีวิวสุพรรณบุรี | รีวิวสุพรรณบุรี".
+// Fix: `metadata.title` below is now the bare review title only (the
+// template adds the site name once). `openGraph.title` / `twitter.title`
+// are NOT covered by `title.template` (Next only applies it to
+// `metadata.title`), so those still get the full "title | site name" form
+// built separately as `socialTitle`.
+//
+// The meta-description truncation helpers (`buildMetaDescription`,
+// `MAX_META_DESCRIPTION_LENGTH`) live in lib/seo-text.ts, not here, so they
+// can be unit-tested without pulling in next/navigation + Supabase.
+
 // revalidate = 60: กันปัญหาหน้า static ค้างข้อมูลเก่า (ดูคำอธิบายเต็มใน app/page.tsx)
 // สำคัญมากสำหรับหน้านี้ เพราะรีวิวใหม่จาก Facebook auto-sync ต้องขึ้นหน้าเว็บได้เอง
 export const revalidate = 60;
 
 interface PageProps {
-  params: { slug: string };
+    params: { slug: string };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const review = await getReviewBySlug(params.slug);
-
-  if (!review) {
+    const review = await getReviewBySlug(params.slug);
+  
+    if (!review) {
+          return {
+                  // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี".
+                  title: "ไม่พบรีวิวนี้",
+                  description:
+                            "ไม่พบข้อมูลรีวิวที่คุณค้นหา กรุณาเลือกดูรีวิวร้านอาหารสุพรรณบุรี และที่เที่ยวสุพรรณบุรีอื่นๆ ของเราแทนได้",
+                  robots: { index: false, follow: true },
+          };
+    }
+  
+    const rawDescription =
+          review.description ?? `รีวิว ${review.title} อัปเดตล่าสุด พร้อมพิกัดและวิดีโอรีวิวจริงจากสุพรรณบุรี`;
+    const description = buildMetaDescription(
+          rawDescription,
+          "ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี",
+          MAX_META_DESCRIPTION_LENGTH
+        );
+    // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี" once.
+    const title = review.title;
+    // openGraph/twitter titles are NOT run through title.template, so they
+    // keep the full "review title | site name" form for social shares.
+    const socialTitle = `${review.title} | ${SITE_NAME}`;
+    const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
+  
     return {
-      title: `ไม่พบรีวิวนี้ | ${SITE_NAME}`,
-      description:
-        "ไม่พบข้อมูลรีวิวที่คุณค้นหา กรุณาเลือกดูรีวิวร้านอาหารสุพรรณบุรี และที่เที่ยวสุพรรณบุรีอื่นๆ ของเราแทนได้",
-      robots: { index: false, follow: true },
+          title,
+          description,
+          alternates: { canonical: canonicalUrl },
+          openGraph: {
+                  title: socialTitle,
+                  description,
+                  url: canonicalUrl,
+                  siteName: SITE_NAME,
+                  locale: "th_TH",
+                  type: "article",
+                  images: review.cover_image
+                            ? [{ url: review.cover_image, width: 1200, height: 630, alt: review.title }]
+                            : [],
+          },
+          twitter: {
+                  card: review.cover_image ? "summary_large_image" : "summary",
+                  title: socialTitle,
+                  description,
+                  images: review.cover_image ? [review.cover_image] : [],
+          },
     };
-  }
-
-  const baseDescription =
-    review.description ?? `รีวิว ${review.title} อัปเดตล่าสุด พร้อมพิกัดและวิดีโอรีวิวจริงจากสุพรรณบุรี`;
-  // Geo-SEO keyword injection — required by spec.
-  const description = `${baseDescription} | ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี`;
-  const title = `${review.title} | ${SITE_NAME}`;
-  const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: canonicalUrl },
-    openGraph: {
-      title,
-      description,
-      url: canonicalUrl,
-      siteName: SITE_NAME,
-      locale: "th_TH",
-      type: "article",
-      images: review.cover_image
-        ? [{ url: review.cover_image, width: 1200, height: 630, alt: review.title }]
-        : [],
-    },
-    twitter: {
-      card: review.cover_image ? "summary_large_image" : "summary",
-      title,
-      description,
-      images: review.cover_image ? [review.cover_image] : [],
-    },
-  };
 }
 
 export default async function ReviewDetailPage({ params }: PageProps) {

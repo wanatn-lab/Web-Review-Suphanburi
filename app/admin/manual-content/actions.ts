@@ -12,7 +12,7 @@ import {
   isAdminSessionValid,
   isEmailAllowedAdmin,
 } from "@/lib/admin-auth";
-import { geocodeLocation } from "@/lib/geocoding";
+import { geocodeLocation, getGeocodingApiKey } from "@/lib/geocoding";
 import { mirrorCoverImage } from "@/lib/cover-image-mirror";
 import { createEnhancedSeoContent, type ManualSeoCategory } from "@/lib/manual-content";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -75,7 +75,7 @@ export async function searchMapLocations(rawQuery: string): Promise<MapLocationS
     return { error: "พิมพ์ชื่อสถานที่ 3–160 ตัวอักษร" };
   }
 
-  const apiKey = process.env.GEOCODING_API_KEY;
+  const apiKey = getGeocodingApiKey();
   if (!apiKey) {
     return { error: "ยังไม่ได้ตั้งค่า GEOCODING_API_KEY ใน Vercel" };
   }

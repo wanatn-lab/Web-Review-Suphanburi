@@ -7,14 +7,11 @@ import {
   importCaptionDraft,
   importFacebookDraft,
   importTikTokDraft,
-  prepareTranscriptionUpload,
-  transcribeStoredVideo,
   updateManualReview,
   type CaptionImportState,
   type FacebookImportState,
   type TikTokImportState,
-  type TranscribeUploadState,
-} from "./actions";
+}   from "./actions";
 
 export interface ContentCategory { slug: string; label: string; is_active: boolean; }
 
@@ -41,7 +38,6 @@ interface ManualContentFormProps {
 const initialImportState: FacebookImportState = { status: "idle" };
 const initialCaptionImportState: CaptionImportState = { status: "idle" };
 const initialTikTokImportState: TikTokImportState = { status: "idle" };
-const initialTranscribeState: TranscribeUploadState = { status: "idle" };
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-[#DA3D0D] focus:ring-2 focus:ring-[#DA3D0D]/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50";
@@ -102,21 +98,10 @@ function TikTokSubmitButton() {
   );
 }
 
-function TranscribeSubmitButton({ pending, onClick }: { pending: boolean; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} disabled={pending} className="mt-3 rounded-xl border border-emerald-600 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60 dark:border-emerald-500 dark:text-emerald-300">
-      {pending ? "กำลังอัปโหลดและถอดเสียง (อาจใช้เวลาสักครู่)..." : "ถอดเสียงจากไฟล์วิดีโอ"}
-    </button>
-  );
-}
-
 export function ManualContentForm({ initialReview, categories }: ManualContentFormProps) {
   const [importState, importAction] = useFormState(importFacebookDraft, initialImportState);
   const [captionImportState, captionImportAction] = useFormState(importCaptionDraft, initialCaptionImportState);
   const [tikTokImportState, tikTokImportAction] = useFormState(importTikTokDraft, initialTikTokImportState);
-  const [transcribeState, setTranscribeState] = useState<TranscribeUploadState>(initialTranscribeState);
-  const [transcriptionFile, setTranscriptionFile] = useState<File | null>(null);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [values, setValues] = useState<FormValues>(initialReview ?? emptyValues(categories));
   const isEditing = Boolean(initialReview);
 
@@ -159,55 +144,8 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
     });
   }, [tikTokImportState, categories]);
 
-  // ถอดเสียงจากไฟล์ที่อัปโหลดสำเร็จ -> แปะต่อท้ายเนื้อหารีวิวปัจจุบัน (ไม่ทับของเดิม
-  // เพราะฟีเจอร์นี้มักถูกใช้ "เสริม" แคปชั่น/ฉบับร่างที่ดึงมาจาก TikTok ไว้แล้ว)
-  useEffect(() => {
-    if (transcribeState.status !== "success") return;
-
-    setValues((current) => ({
-      ...current,
-      reviewContent: current.reviewContent
-        ? `${current.reviewContent}\n\n[ถอดเสียงจากไฟล์ที่อัปโหลด]\n${transcribeState.transcript}`
-        : transcribeState.transcript,
-    }));
-  }, [transcribeState]);
-
   function updateValue<Key extends keyof FormValues>(key: Key, value: FormValues[Key]) {
     setValues((current) => ({ ...current, [key]: value }));
-  }
-
-  async function transcribeSelectedFile() {
-    if (!transcriptionFile) {
-      setTranscribeState({ status: "error", message: "กรุณาเลือกไฟล์วิดีโอหรือเสียงก่อน" });
-      return;
-    }
-    setIsTranscribing(true);
-    setTranscribeState({ status: "idle" });
-    try {
-      const ticket = await prepareTranscriptionUpload(transcriptionFile.name, transcriptionFile.type || "application/octet-stream", transcriptionFile.size);
-      if (ticket.status === "error") {
-        setTranscribeState(ticket);
-        return;
-      }
-      const uploadResponse = await fetch(ticket.signedUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": transcriptionFile.type || "application/octet-stream",
-          "x-upsert": "false",
-        },
-        body: transcriptionFile,
-      });
-      if (!uploadResponse.ok) {
-        setTranscribeState({ status: "error", message: "อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่" });
-        return;
-      }
-      setTranscribeState(await transcribeStoredVideo(ticket.path));
-    } catch (error) {
-      console.error("[manual-content] Client transcription flow failed:", error);
-      setTranscribeState({ status: "error", message: "เกิดข้อผิดพลาดระหว่างอัปโหลดหรือถอดเสียง กรุณาลองใหม่" });
-    } finally {
-      setIsTranscribing(false);
-    }
   }
 
   return (
@@ -276,30 +214,7 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
             )}
           </section>
 
-          <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-            <h2 className="text-base font-extrabold">ถอดเสียงจากไฟล์วิดีโอ (สำหรับ TikTok เป็นหลัก)</h2>
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-              TikTok ไม่มีทางดึงไฟล์วิดีโอมาถอดเสียงให้อัตโนมัติ — กด &quot;บันทึกวิดีโอ&quot; จากคลิปของคุณเองในแอป TikTok ก่อน
-              แล้วอัปโหลดไฟล์ตรงนี้ ระบบจะถอดเสียงพากย์เป็นข้อความแล้วแปะต่อท้ายช่อง &quot;รายละเอียด/เนื้อหารีวิว&quot; ด้านล่างให้
-              (จำกัดไฟล์ไม่เกิน 30MB ต้องตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN ก่อนถึงจะใช้ได้)
-            </p>
-            <div className="mt-3">
-              <label htmlFor="video_file" className="text-sm font-semibold">ไฟล์วิดีโอหรือเสียง</label>
-              <input id="video_file" type="file" accept="video/mp4,video/quicktime,video/webm,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac" className={inputClass} onChange={(event) => setTranscriptionFile(event.target.files?.[0] ?? null)} />
-              <TranscribeSubmitButton pending={isTranscribing} onClick={transcribeSelectedFile} />
-            </div>
-            {transcribeState.status === "error" && (
-              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
-                {transcribeState.message}
-              </p>
-            )}
-            {transcribeState.status === "success" && (
-              <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950/30 dark:text-green-100">
-                ถอดเสียงสำเร็จ แปะข้อความต่อท้ายช่องเนื้อหารีวิวด้านล่างให้แล้ว กรุณาตรวจแก้ก่อนเผยแพร่
-              </p>
-            )}
-          </section>
-
+          
           <section className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-5 dark:border-sky-900/50 dark:bg-sky-950/20">
             <h2 className="text-base font-extrabold">วางแคปชั่นด้วยตัวเอง</h2>
             <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">

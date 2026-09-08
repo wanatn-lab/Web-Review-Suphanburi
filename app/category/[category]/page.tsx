@@ -5,6 +5,8 @@ import { getCategoryBySlug } from "@/lib/categories";
 import ReviewCard from "@/components/review-card";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+
 export const revalidate = 60;
 interface PageProps { params: { category: string }; }
 
@@ -41,8 +43,29 @@ export default async function CategoryPage({ params }: PageProps) {
   if (!category) notFound();
   const reviews = await getReviewsByCategory(category.slug, 24);
   const label = category.label;
+  const categoryUrl = `${SITE_URL}/category/${category.slug}`;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "หน้าแรก", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: `${label}สุพรรณบุรี`, item: categoryUrl },
+        ],
+      },
+      {
+        "@type": "CollectionPage",
+        name: `${label}สุพรรณบุรี`,
+        url: categoryUrl,
+        inLanguage: "th-TH",
+        isPartOf: { "@type": "WebSite", name: "รีวิวสุพรรณบุรี", url: SITE_URL },
+      },
+    ],
+  };
   return (
     <main className="px-4 py-8 sm:px-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <nav aria-label="breadcrumb" className="mb-4"><ol className="flex flex-wrap items-center gap-1 text-xs text-neutral-400"><li><a href="/" className="hover:text-[#FF4B12]">หน้าแรก</a></li><li aria-hidden="true">/</li><li aria-current="page" className="text-neutral-600 dark:text-neutral-300">{label}สุพรรณบุรี</li></ol></nav>
       <h1 className="mb-1 font-[family-name:var(--font-kanit)] text-2xl font-extrabold">{label}สุพรรณบุรี</h1>
       <p className="mb-6 text-sm text-neutral-500">{category.seo_description?.trim() || `รวมรีวิว${label}ในจังหวัดสุพรรณบุรี อัปเดตล่าสุดจากคลิปวิดีโอจริง`}</p>

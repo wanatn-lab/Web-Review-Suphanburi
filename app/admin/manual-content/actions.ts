@@ -21,7 +21,6 @@ import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/faceboo
 import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manual-import";
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
-import { transcribeAudio } from "@/lib/audio-transcription";
 
 const ADMIN_PATH = "/admin/manual-content";
 const CATEGORY_ADMIN_PATH = "/admin/categories";
@@ -50,11 +49,6 @@ export type CaptionImportState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | { status: "success"; draft: CaptionDraft };
-
-export type TranscribeUploadState =
-  | { status: "idle" }
-  | { status: "error"; message: string }
-  | { status: "success"; transcript: string };
 
 function readRequiredText(formData: FormData, key: string, maxLength: number): string | null {
   const value = formData.get(key);
@@ -256,51 +250,6 @@ export async function importCaptionDraft(
     },
   };
 }
-
-// เพดานขนาดไฟล์อัปโหลด: กันไม่ให้ชนเพดาน request body ของ Server Actions บน
-// Vercel (ปรับไว้ที่ 25mb ใน next.config.js แล้ว) เผื่อระยะปลอดภัยไว้ด้วย
-const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
-const TRANSCRIPTION_BUCKET = "review-media";
-const TRANSCRIPTION_PATH_PREFIX = "transcription/";
-export type TranscriptionUploadTicket = { status: "error"; message: string } | { status: "success"; path: string; signedUrl: string };
-
-function isSupportedMediaUpload(fileName: string, contentType: string): boolean {
-  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
-  return new Set(["mp4", "mov", "webm", "mp3", "m4a", "wav", "ogg", "aac"]).has(extension) && /^(video|audio)\//.test(contentType);
-}
-
-export async function prepareTranscriptionUpload(fileName: string, contentType: string, size: number): Promise<TranscriptionUploadTicket> {
-  if (!isAuthenticated()) return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
-  if (!Number.isFinite(size) || size <= 0 || size > MAX_UPLOAD_BYTES) return { status: "error", message: "ไฟล์ใหญ่เกินไป (จำกัดไม่เกิน 30MB)" };
-  if (!isSupportedMediaUpload(fileName, contentType)) return { status: "error", message: "รองรับ MP4, MOV, WebM, MP3, M4A, WAV, OGG และ AAC" };
-  const extension = fileName.split(".").pop()?.toLowerCase();
-  const path = `${TRANSCRIPTION_PATH_PREFIX}${randomUUID()}.${extension}`;
-  const { data, error } = await getSupabaseAdmin().storage.from(TRANSCRIPTION_BUCKET).createSignedUploadUrl(path);
-  if (error || !data) {
-    console.error("[manual-content] Failed to create upload URL:", error?.message);
-    return { status: "error", message: "เตรียมพื้นที่อัปโหลดไม่สำเร็จ กรุณาลองใหม่" };
-  }
-  return { status: "success", path: data.path, signedUrl: data.signedUrl };
-}
-
-export async function transcribeStoredVideo(path: string): Promise<TranscribeUploadState> {
-  if (!isAuthenticated()) return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
-  if (!path.startsWith(TRANSCRIPTION_PATH_PREFIX) || !/^transcription\/[a-f0-9-]+\.(mp4|mov|webm|mp3|m4a|wav|ogg|aac)$/i.test(path)) return { status: "error", message: "ไฟล์สำหรับถอดเสียงไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่" };
-  const storage = getSupabaseAdmin().storage.from(TRANSCRIPTION_BUCKET);
-  try {
-    const { data, error } = await storage.download(path);
-    if (error || !data) return { status: "error", message: "อ่านไฟล์ที่อัปโหลดไม่สำเร็จ กรุณาลองใหม่" };
-    const transcript = await transcribeAudio(await data.arrayBuffer());
-    return transcript ? { status: "success", transcript } : { status: "error", message: "ถอดเสียงไม่สำเร็จ — ตรวจ CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_AI_API_TOKEN หรือคลิปอาจไม่มีเสียงพูด" };
-  } catch (error) {
-    console.error("[manual-content] transcribeStoredVideo failed:", error instanceof Error ? error.message : error);
-    return { status: "error", message: "เกิดข้อผิดพลาดระหว่างถอดเสียง กรุณาลองใหม่" };
-  } finally {
-    const { error } = await storage.remove([path]);
-    if (error) console.error("[manual-content] Failed to delete temporary media:", error.message);
-  }
-}
-
 
 export async function loginAdmin(formData: FormData) {
   const password = formData.get("password");

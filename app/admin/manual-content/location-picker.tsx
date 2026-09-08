@@ -1,12 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
-interface LocationResult {
-  label: string;
-  latitude: number;
-  longitude: number;
-}
+import { useState, useTransition } from "react";
+import { searchMapLocations, type MapLocationResult } from "./actions";
 
 export function LocationPicker({
   value,
@@ -17,11 +12,12 @@ export function LocationPicker({
   onChange: (value: string) => void;
   inputClass: string;
 }) {
-  const [results, setResults] = useState<LocationResult[]>([]);
-  const [selected, setSelected] = useState<LocationResult | null>(null);
+  const [results, setResults] = useState<MapLocationResult[]>([]);
+  const [selected, setSelected] = useState<MapLocationResult | null>(null);
   const [notice, setNotice] = useState("");
+  const [isPending, startTransition] = useTransition();
 
-  async function search() {
+  function search() {
     const query = value.trim();
     if (query.length < 3) {
       setNotice("พิมพ์อย่างน้อย 3 ตัวอักษร");
@@ -31,21 +27,20 @@ export function LocationPicker({
 
     setNotice("กำลังค้นหาใน Google Maps…");
     setResults([]);
-    try {
-      const response = await fetch(`/api/location-search?q=${encodeURIComponent(query)}`, { cache: "no-store" });
-      const payload = await response.json() as { results?: LocationResult[]; error?: string };
-      if (!response.ok) {
-        setNotice(payload.error ?? "ค้นหาสถานที่ไม่สำเร็จ");
+    // Server Action shares the content form's authenticated session. This is
+    // more reliable than manually parsing cookies in a separate API request.
+    startTransition(async () => {
+      const result = await searchMapLocations(query);
+      if ("error" in result) {
+        setNotice(result.error);
         return;
       }
-      setResults(payload.results ?? []);
-      setNotice((payload.results?.length ?? 0) ? "เลือกสถานที่ที่ตรงที่สุด" : "ไม่พบผลลัพธ์ ลองเพิ่มชื่ออำเภอหรือจุดสังเกต");
-    } catch {
-      setNotice("ค้นหาสถานที่ไม่สำเร็จ กรุณาลองใหม่");
-    }
+      setResults(result.results);
+      setNotice("เลือกสถานที่ที่ตรงที่สุดจากรายการด้านล่าง");
+    });
   }
 
-  function selectLocation(result: LocationResult) {
+  function selectLocation(result: MapLocationResult) {
     onChange(result.label);
     setSelected(result);
     setResults([]);
@@ -67,15 +62,21 @@ export function LocationPicker({
             onChange(event.target.value);
             setSelected(null);
           }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              search();
+            }
+          }}
           placeholder="เช่น ชื่อร้าน + อำเภอ หรือชื่อสถานที่"
         />
-        <button type="button" onClick={search} className="shrink-0 rounded-xl border border-[#DA3D0D] px-3 text-sm font-bold text-[#B62F08] hover:bg-[#FFF2ED]">
-          ค้นหา
+        <button type="button" onClick={search} disabled={isPending} className="shrink-0 rounded-xl border border-[#DA3D0D] px-3 text-sm font-bold text-[#B62F08] hover:bg-[#FFF2ED] disabled:cursor-wait disabled:opacity-60">
+          {isPending ? "กำลังค้นหา…" : "ค้นหา"}
         </button>
       </div>
       <input type="hidden" name="latitude" value={selected?.latitude ?? ""} />
       <input type="hidden" name="longitude" value={selected?.longitude ?? ""} />
-      <p className="mt-1 text-xs text-neutral-500">พิมพ์ค้นหา แล้วเลือกผลลัพธ์เพื่อบันทึกพิกัดจริงพร้อมที่อยู่</p>
+      <p className="mt-1 text-xs text-neutral-500">พิมพ์ชื่อร้าน กดค้นหา แล้วเลือกผลลัพธ์เพื่อบันทึกที่อยู่และพิกัดจริง</p>
       {notice && <p className="mt-2 text-xs text-neutral-600">{notice}</p>}
       {results.length > 0 && (
         <ul className="mt-2 overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">

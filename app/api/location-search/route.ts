@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, isAdminSessionValid } from "@/lib/admin-auth";
 
 const ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json";
 const MAX_RESULTS = 5;
 
 export async function GET(request: Request) {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const sessionToken = cookieHeader.match(new RegExp(`(?:^|; )${ADMIN_SESSION_COOKIE}=([^;]+)`))?.[1];
-  if (!isAdminSessionValid(sessionToken ? decodeURIComponent(sessionToken) : undefined)) {
+  // Read cookies through Next's request store rather than manually parsing the
+  // Cookie header. Vercel/proxy formatting is not guaranteed to use "; " and
+  // could otherwise reject a valid admin session.
+  const sessionToken = cookies().get(ADMIN_SESSION_COOKIE)?.value;
+  if (!isAdminSessionValid(sessionToken)) {
     return NextResponse.json({ error: "กรุณาเข้าสู่ระบบผู้ดูแลก่อนค้นหาสถานที่" }, { status: 401 });
   }
 

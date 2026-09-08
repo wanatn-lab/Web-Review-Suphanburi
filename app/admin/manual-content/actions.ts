@@ -50,6 +50,71 @@ export type CaptionImportState =
   | { status: "error"; message: string }
   | { status: "success"; draft: CaptionDraft };
 
+export interface MapLocationResult {
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
+export type MapLocationSearchState =
+  | { results: MapLocationResult[]; error?: never }
+  | { results?: never; error: string };
+
+/**
+ * Admin-only Google Maps search. This is a Server Action, not a browser route,
+ * so it receives the same authenticated cookie context as the content form and
+ * never exposes the Google API key to the client.
+ */
+export async function searchMapLocations(rawQuery: string): Promise<MapLocationSearchState> {
+  if (!isAuthenticated()) {
+    return { error: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบผู้ดูแลอีกครั้ง" };
+  }
+
+  const query = rawQuery.trim();
+  if (query.length < 3 || query.length > 160) {
+    return { error: "พิมพ์ชื่อสถานที่ 3–160 ตัวอักษร" };
+  }
+
+  const apiKey = process.env.GEOCODING_API_KEY;
+  if (!apiKey) {
+    return { error: "ยังไม่ได้ตั้งค่า GEOCODING_API_KEY ใน Vercel" };
+  }
+
+  const address = /สุพรรณบุรี/u.test(query) ? query : `${query} สุพรรณบุรี`;
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("address", address);
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("language", "th");
+  url.searchParams.set("region", "TH");
+
+  try {
+    const response = await fetch(url.toString(), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    const payload = await response.json() as {
+      status?: string;
+      results?: Array<{ formatted_address?: string; geometry?: { location?: { lat?: number; lng?: number } } }>;
+    };
+
+    if (!response.ok || payload.status !== "OK") {
+      return { error: "ไม่พบสถานที่ ลองเพิ่มชื่ออำเภอหรือคำว่า สุพรรณบุรี" };
+    }
+
+    const results = (payload.results ?? []).flatMap((result) => {
+      const latitude = result.geometry?.location?.lat;
+      const longitude = result.geometry?.location?.lng;
+      if (!result.formatted_address || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
+      return [{ label: result.formatted_address, latitude: latitude as number, longitude: longitude as number }];
+    }).slice(0, 5);
+
+    return results.length ? { results } : { error: "ไม่พบสถานที่ ลองเพิ่มชื่ออำเภอหรือคำว่า สุพรรณบุรี" };
+  } catch (error) {
+    console.error("[manual-content] Google Maps search failed:", error);
+    return { error: "เชื่อมต่อ Google Maps ไม่สำเร็จ กรุณาลองใหม่" };
+  }
+}
+
 function readSelectedCoordinates(formData: FormData): { lat: number; lng: number } | null | undefined {
   const rawLatitude = formData.get("latitude");
   const rawLongitude = formData.get("longitude");

@@ -51,6 +51,11 @@ export type CaptionImportState =
   | { status: "success"; draft: CaptionDraft };
 
 export interface MapLocationResult {
+  placeId: string;
+  label: string;
+}
+
+export interface SelectedMapLocation {
   label: string;
   latitude: number;
   longitude: number;
@@ -61,9 +66,9 @@ export type MapLocationSearchState =
   | { results?: never; error: string };
 
 /**
- * Admin-only Google Maps search. This is a Server Action, not a browser route,
- * so it receives the same authenticated cookie context as the content form and
- * never exposes the Google API key to the client.
+ * Google Maps-style typeahead. Places Autocomplete finds named businesses;
+ * Geocoding is intentionally not used here because it can return a province
+ * centroid instead of the actual storefront.
  */
 export async function searchMapLocations(rawQuery: string): Promise<MapLocationSearchState> {
   if (!isAuthenticated()) {
@@ -80,37 +85,106 @@ export async function searchMapLocations(rawQuery: string): Promise<MapLocationS
     return { error: "ยังไม่ได้ตั้งค่า GEOCODING_API_KEY ใน Vercel" };
   }
 
-  const address = /สุพรรณบุรี/u.test(query) ? query : `${query} สุพรรณบุรี`;
-  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-  url.searchParams.set("address", address);
-  url.searchParams.set("key", apiKey);
-  url.searchParams.set("language", "th");
-  url.searchParams.set("region", "TH");
-
   try {
-    const response = await fetch(url.toString(), {
+    const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+      method: "POST",
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+      },
+      body: JSON.stringify({
+        input: query,
+        languageCode: "th",
+        regionCode: "TH",
+        includedRegionCodes: ["th"],
+        // Bias suggestions toward Suphan Buri; it remains a bias, so an
+        // explicitly typed place outside the province still works.
+        locationBias: {
+          circle: {
+            center: { latitude: 14.4742, longitude: 100.1177 },
+            radius: 50000,
+          },
+        },
+      }),
     });
+
     const payload = await response.json() as {
-      status?: string;
-      results?: Array<{ formatted_address?: string; geometry?: { location?: { lat?: number; lng?: number } } }>;
+      suggestions?: Array<{ placePrediction?: { placeId?: string; text?: { text?: string }; structuredFormat?: { secondaryText?: { text?: string } } } }>;
+      error?: { message?: string };
     };
 
-    if (!response.ok || payload.status !== "OK") {
-      return { error: "ไม่พบสถานที่ ลองเพิ่มชื่ออำเภอหรือคำว่า สุพรรณบุรี" };
+    if (response.status === 403) {
+      console.error("[manual-content] Places Autocomplete denied:", payload.error?.message);
+      return { error: "ต้องเปิด Places API (New) ให้ key นี้ใน Google Cloud ก่อนใช้งาน" };
+    }
+    if (!response.ok) {
+      console.error("[manual-content] Places Autocomplete failed:", payload.error?.message);
+      return { error: "ค้นหาสถานที่จาก Google Maps ไม่สำเร็จ กรุณาลองใหม่" };
     }
 
-    const results = (payload.results ?? []).flatMap((result) => {
-      const latitude = result.geometry?.location?.lat;
-      const longitude = result.geometry?.location?.lng;
-      if (!result.formatted_address || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
-      return [{ label: result.formatted_address, latitude: latitude as number, longitude: longitude as number }];
+    const results = (payload.suggestions ?? []).flatMap((suggestion) => {
+      const prediction = suggestion.placePrediction;
+      const placeId = prediction?.placeId;
+      const primary = prediction?.text?.text;
+      const secondary = prediction?.structuredFormat?.secondaryText?.text;
+      if (!placeId || !primary) return [];
+      return [{ placeId, label: secondary ? `${primary} — ${secondary}` : primary }];
     }).slice(0, 5);
 
-    return results.length ? { results } : { error: "ไม่พบสถานที่ ลองเพิ่มชื่ออำเภอหรือคำว่า สุพรรณบุรี" };
+    return results.length ? { results } : { error: "ไม่พบสถานที่ ลองเพิ่มชื่ออำเภอหรือชื่อเต็มของร้าน" };
   } catch (error) {
-    console.error("[manual-content] Google Maps search failed:", error);
+    console.error("[manual-content] Places Autocomplete threw:", error);
+    return { error: "เชื่อมต่อ Google Maps ไม่สำเร็จ กรุณาลองใหม่" };
+  }
+}
+
+export async function getMapLocationDetails(placeId: string): Promise<SelectedMapLocation | { error: string }> {
+  if (!isAuthenticated()) {
+    return { error: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบผู้ดูแลอีกครั้ง" };
+  }
+  if (!/^[A-Za-z0-9_-]{1,512}$/.test(placeId)) {
+    return { error: "รหัสสถานที่ไม่ถูกต้อง" };
+  }
+
+  const apiKey = getGeocodingApiKey();
+  if (!apiKey) return { error: "ยังไม่ได้ตั้งค่า GEOCODING_API_KEY ใน Vercel" };
+
+  try {
+    const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "displayName,formattedAddress,location",
+      },
+    });
+    const payload = await response.json() as {
+      displayName?: { text?: string };
+      formattedAddress?: string;
+      location?: { latitude?: number; longitude?: number };
+      error?: { message?: string };
+    };
+
+    if (response.status === 403) {
+      console.error("[manual-content] Place Details denied:", payload.error?.message);
+      return { error: "ต้องเปิด Places API (New) ให้ key นี้ใน Google Cloud ก่อนใช้งาน" };
+    }
+    const latitude = payload.location?.latitude;
+    const longitude = payload.location?.longitude;
+    if (!response.ok || !payload.formattedAddress || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      console.error("[manual-content] Place Details failed:", payload.error?.message);
+      return { error: "ดึงพิกัดของสถานที่นี้ไม่สำเร็จ" };
+    }
+
+    return {
+      label: payload.formattedAddress,
+      latitude: latitude as number,
+      longitude: longitude as number,
+    };
+  } catch (error) {
+    console.error("[manual-content] Place Details threw:", error);
     return { error: "เชื่อมต่อ Google Maps ไม่สำเร็จ กรุณาลองใหม่" };
   }
 }

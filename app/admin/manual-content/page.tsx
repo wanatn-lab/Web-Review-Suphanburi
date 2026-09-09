@@ -8,7 +8,7 @@ import {
   isEmailLoginConfigured,
 } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { loginAdmin, loginAdminWithEmail, logoutAdmin, publishYouTubeImport, rejectYouTubeImport } from "./actions";
+import { loginAdmin, loginAdminWithEmail, logoutAdmin, publishYouTubeImport, rejectYouTubeImport, syncYouTubeNow } from "./actions";
 import { ManualContentForm, type ContentCategory, type EditableManualReview } from "./manual-content-form";
 import { DeleteReviewButton } from "./delete-review-button";
 
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; deleted?: string; category?: string; edit?: string; youtube?: string; error?: string };
+  searchParams: { created?: string; updated?: string; deleted?: string; category?: string; edit?: string; youtube?: string; count?: string; error?: string };
 }
 
 interface ManualReviewListItem {
@@ -298,6 +298,16 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
           ไม่นำคลิปนี้ขึ้นเว็บแล้ว ระบบจะไม่ดึงคลิปเดิมกลับมาเข้าคิวอีก
         </div>
       )}
+      {searchParams.youtube === "synced" && (
+        <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
+          ตรวจช่อง YouTube เรียบร้อยแล้ว — เพิ่มคลิปใหม่เข้าคิว {searchParams.count ?? "0"} คลิป โปรดตรวจร่างก่อนกดเผยแพร่
+        </div>
+      )}
+      {searchParams.youtube === "sync-error" && (
+        <div className="mt-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          ซิงก์ YouTube ไม่สำเร็จ — ตรวจว่า Vercel มีตัวแปร <code>YOUTUBE_API_KEY</code> และเปิด YouTube Data API v3 แล้ว
+        </div>
+      )}
       {searchParams.category && (
         <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
           บันทึกหมวดหมู่เรียบร้อยแล้ว
@@ -335,6 +345,12 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         <p className="mt-2 text-xs text-neutral-500">
           กรุณาตรวจว่าเป็นคลิปแนวตั้งหรือสี่เหลี่ยมจัตุรัสจริงก่อนเผยแพร่ เนื่องจาก YouTube Data API ไม่มีสถานะ Shorts ที่ยืนยันได้โดยตรงสำหรับคลิปสาธารณะ
         </p>
+        <form action={syncYouTubeNow} className="mt-4 flex flex-wrap items-center gap-3">
+          <button type="submit" className="rounded-xl bg-[#DA3D0D] px-4 py-2 text-sm font-bold text-white hover:bg-[#B62F08]">
+            ซิงก์ YouTube ตอนนี้
+          </button>
+          <p className="text-xs text-neutral-500">กดได้ทุกเมื่อ และระบบจะตรวจซ้ำอัตโนมัติทุกวันเวลา 03:15 น.</p>
+        </form>
         {pendingYouTubeImports.length === 0 ? (
           <p className="mt-4 text-sm text-neutral-500">ยังไม่มีคลิปที่รอตรวจ หรือยังไม่ได้สั่งซิงก์จาก YouTube</p>
         ) : (

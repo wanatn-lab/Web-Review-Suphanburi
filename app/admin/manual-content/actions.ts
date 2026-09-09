@@ -448,14 +448,16 @@ export async function syncYouTubeNow() {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
+  let result;
   try {
-    const result = await syncYouTubeImports();
-    revalidatePath(ADMIN_PATH);
-    redirect(`${ADMIN_PATH}?youtube=synced&count=${result.queued}`);
+    result = await syncYouTubeImports();
   } catch (error) {
     console.error("[manual-content] YouTube sync failed:", error);
     redirect(`${ADMIN_PATH}?youtube=sync-error`);
   }
+
+  revalidatePath(ADMIN_PATH);
+  redirect(`${ADMIN_PATH}?youtube=synced&count=${result.queued}`);
 }
 
 // เข้าสู่ระบบด้วยอีเมล + รหัสผ่านที่ตั้งเอง (Supabase Auth) — ทางเลือกเสริมนอกจาก

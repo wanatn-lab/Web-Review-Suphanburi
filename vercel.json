@@ -8,7 +8,7 @@
           },
           {
                   "path": "/api/sync-youtube",
-                  "schedule": "15 3 * * *"
+                  "schedule": "15 20 * * *"
           },
           {
                   "path": "/api/refresh-facebook-token",

@@ -21,6 +21,7 @@ import { importFacebookPostDraft, type FacebookImportDraft } from "@/lib/faceboo
 import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manual-import";
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
+import { syncYouTubeImports } from "@/lib/youtube-import-sync";
 
 const ADMIN_PATH = "/admin/manual-content";
 const CATEGORY_ADMIN_PATH = "/admin/categories";
@@ -439,6 +440,22 @@ export async function logoutAdmin() {
     maxAge: 0,
   });
   redirect(ADMIN_PATH);
+}
+
+/** Runs the exact same private queue import as the nightly Vercel Cron. */
+export async function syncYouTubeNow() {
+  if (!isAuthenticated()) {
+    redirect(`${ADMIN_PATH}?error=session`);
+  }
+
+  try {
+    const result = await syncYouTubeImports();
+    revalidatePath(ADMIN_PATH);
+    redirect(`${ADMIN_PATH}?youtube=synced&count=${result.queued}`);
+  } catch (error) {
+    console.error("[manual-content] YouTube sync failed:", error);
+    redirect(`${ADMIN_PATH}?youtube=sync-error`);
+  }
 }
 
 // เข้าสู่ระบบด้วยอีเมล + รหัสผ่านที่ตั้งเอง (Supabase Auth) — ทางเลือกเสริมนอกจาก

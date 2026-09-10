@@ -67,7 +67,7 @@ export default async function HomePage() {
             <li key={c.slug}>
               <Link
                 href={`/category/${c.slug}`}
-                className="whitespace-nowrap rounded-full border border-white/50 bg-white/10 px-4 py-2 text-sm font-medium transition hover:bg-white hover:text-[#DA3D0D]"
+                className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-white/50 bg-white/10 px-4 py-2 text-sm font-medium transition hover:bg-white hover:text-[#DA3D0D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 {c.label}
               </Link>
@@ -79,9 +79,9 @@ export default async function HomePage() {
       {trending.length > 0 && (
         <section className="px-4 py-8 sm:px-8">
           <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">วิดีโอมาแรง</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             {trending.map((review) => (
-              <TrendingVideoCard key={review.id} review={review} className="w-36 flex-none sm:w-44" />
+              <TrendingVideoCard key={review.id} review={review} className="w-36 flex-none snap-start sm:w-44" />
             ))}
           </div>
         </section>

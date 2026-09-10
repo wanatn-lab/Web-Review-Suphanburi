@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, isAdminSessionValid } from "@/lib/admin-auth";
 import { getGeocodingApiKey } from "@/lib/geocoding";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 const ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json";
 const MAX_RESULTS = 5;
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     const results = (payload.results ?? []).flatMap((result) => {
       const latitude = result.geometry?.location?.lat;
       const longitude = result.geometry?.location?.lng;
-      if (!result.formatted_address || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
+      if (!result.formatted_address || !isSuphanBuriCoordinate(latitude ?? null, longitude ?? null)) return [];
       return [{ label: result.formatted_address, latitude: latitude as number, longitude: longitude as number }];
     }).slice(0, MAX_RESULTS);
 

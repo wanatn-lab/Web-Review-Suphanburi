@@ -5,6 +5,7 @@ import { getReviewBySlug } from "@/lib/supabase";
 import { defaultCategoryLabel } from "@/lib/categories";
 import { VideoPlayer } from "@/components/video-player";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 // app/reviews/[slug]/page.tsx
 // Review Detail Page — Server Component (SSR), Dynamic Route.
@@ -102,7 +103,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   }
 
   const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
-  const hasGeo = review.latitude != null && review.longitude != null;
+  const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
 
   // โชว์วิดีโอ "ช่องทางเดียว" — เลือก Facebook ก่อน ตามด้วย TikTok หรือ YouTube เพราะ
   // ในทางปฏิบัติมีแค่ช่องทางเดียวที่ถูก sync/กรอกไว้อยู่แล้ว ต่อให้มีทั้งคู่ก็ไม่ต้อง
@@ -123,10 +124,11 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           ? review.youtube_embed_url
           : null;
 
-  // ใช้ google_map_embed_url ที่เก็บไว้ก่อน ถ้าไม่มีค่อย fallback ไปสร้างจาก lat/lng
-  const mapSrc =
-    review.google_map_embed_url ??
-    (hasGeo ? `https://www.google.com/maps?q=${review.latitude},${review.longitude}&z=16&output=embed` : null);
+  // Ignore a saved embed URL unless its coordinates have passed the provincial
+  // guardrail. This prevents an old wrong pin from appearing in Geo schema.
+  const mapSrc = hasGeo
+    ? `https://www.google.com/maps?q=${review.latitude},${review.longitude}&z=16&output=embed`
+    : null;
   const directionsUrl = hasGeo
     ? `https://maps.google.com/?q=${review.latitude},${review.longitude}`
     : null;

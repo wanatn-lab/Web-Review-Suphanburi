@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
 import type { Review } from "@/lib/supabase";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
 
 function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
@@ -39,7 +40,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
     ? CATEGORY_BADGE_CLASS[review.category] ?? "bg-neutral-100 text-neutral-600"
     : "bg-neutral-100 text-neutral-600";
   const label = review.category ? review.category_label ?? defaultCategoryLabel(review.category) : null;
-  const hasCoordinates = review.latitude != null && review.longitude != null;
+  const hasCoordinates = isSuphanBuriCoordinate(review.latitude, review.longitude);
   const mapsUrl = hasCoordinates
     ? `https://www.google.com/maps/search/?api=1&query=${review.latitude},${review.longitude}`
     : review.location_text

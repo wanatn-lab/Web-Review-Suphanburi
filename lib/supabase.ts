@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { resilientFetch } from "./supabase-fetch";
+import { hasOutOfSuphanBuriCoordinates } from "./location-validation";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -23,20 +24,25 @@ function toReview(row: ReviewRow): Review {
   return { ...review, category_label: category?.label ?? null };
 }
 
+function isPublicReview(review: Review): boolean {
+  return !hasOutOfSuphanBuriCoordinates(review.latitude, review.longitude);
+}
+
 export async function getReviewBySlug(slug: string): Promise<Review | null> {
   const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("slug", slug).maybeSingle();
   if (error) { console.error(`[getReviewBySlug] slug="${slug}":`, error.message); return null; }
-  return data ? toReview(data as unknown as ReviewRow) : null;
+  const review = data ? toReview(data as unknown as ReviewRow) : null;
+  return review && isPublicReview(review) ? review : null;
 }
 export async function getAllReviews(limit = 24): Promise<Review[]> {
-  const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).order("created_at", { ascending: false }).limit(limit + 50);
   if (error) { console.error("[getAllReviews]:", error.message); return []; }
-  return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
+  return (data ?? []).map((row) => toReview(row as unknown as ReviewRow)).filter(isPublicReview).slice(0, limit);
 }
 export async function getReviewsByCategory(category: string, limit = 24): Promise<Review[]> {
-  const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("category", category).order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("category", category).order("created_at", { ascending: false }).limit(limit + 50);
   if (error) { console.error(`[getReviewsByCategory] category="${category}":`, error.message); return []; }
-  return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
+  return (data ?? []).map((row) => toReview(row as unknown as ReviewRow)).filter(isPublicReview).slice(0, limit);
 }
 export async function searchReviews(query: string, limit = 24): Promise<Review[]> {
   const sanitized = query.trim().replace(/[,()]/g, "");
@@ -44,5 +50,5 @@ export async function searchReviews(query: string, limit = 24): Promise<Review[]
   const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null)
     .or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`).order("created_at", { ascending: false }).limit(limit);
   if (error) { console.error(`[searchReviews] query="${sanitized}":`, error.message); return []; }
-  return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
+  return (data ?? []).map((row) => toReview(row as unknown as ReviewRow)).filter(isPublicReview).slice(0, limit);
 }

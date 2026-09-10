@@ -7,6 +7,7 @@ import PinIcon from "@/components/pin-icon";
 import ShareButton from "@/components/share-button";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
 import type { Review } from "@/lib/supabase";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
@@ -78,7 +79,7 @@ export default function ReviewCard({
   const label = review.category ? review.category_label ?? defaultCategoryLabel(review.category) : null;
   const href = `/reviews/${review.slug}`;
   const canonicalUrl = `${SITE_URL}${href}`;
-  const hasGeo = review.latitude != null && review.longitude != null;
+  const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
   const mapsUrl = hasGeo ? `https://maps.google.com/?q=${review.latitude},${review.longitude}` : null;
   const video = videoSource(review);
 

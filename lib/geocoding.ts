@@ -1,4 +1,5 @@
 import "server-only";
+import { isSuphanBuriCoordinate } from "./location-validation";
 
 // lib/geocoding.ts
 // แปลง "ข้อความสถานที่" ที่อยู่ในแคปชั่น Facebook ให้กลายเป็นพิกัด lat/lng
@@ -138,7 +139,9 @@ export async function geocodeLocation(locationText: string): Promise<GeoPoint | 
       return null;
     }
 
-    return { lat, lng };
+    // The Google result can still be a similarly named place in another
+    // province. Never attach those coordinates to Suphan Buri content.
+    return isSuphanBuriCoordinate(lat, lng) ? { lat, lng } : null;
   } catch (err) {
     // รวมถึง AbortError ตอน timeout — กลืนไว้ทั้งหมด ห้ามให้การซิงก์พังเพราะเรื่องนี้
     const message = err instanceof Error ? err.message : "Unknown error";

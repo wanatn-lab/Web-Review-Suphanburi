@@ -22,6 +22,7 @@ import { importTikTokPostDraft, type TikTokImportDraft } from "@/lib/tiktok-manu
 import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
 import { syncYouTubeImports } from "@/lib/youtube-import-sync";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 const ADMIN_PATH = "/admin/manual-content";
 const CATEGORY_ADMIN_PATH = "/admin/categories";
@@ -174,9 +175,9 @@ export async function getMapLocationDetails(placeId: string): Promise<SelectedMa
     }
     const latitude = payload.location?.latitude;
     const longitude = payload.location?.longitude;
-    if (!response.ok || !payload.formattedAddress || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    if (!response.ok || !payload.formattedAddress || !isSuphanBuriCoordinate(latitude ?? null, longitude ?? null)) {
       console.error("[manual-content] Place Details failed:", payload.error?.message);
-      return { error: "ดึงพิกัดของสถานที่นี้ไม่สำเร็จ" };
+      return { error: "สถานที่นี้อยู่นอกพื้นที่สุพรรณบุรี หรือดึงพิกัดไม่สำเร็จ" };
     }
 
     return {
@@ -201,7 +202,7 @@ function readSelectedCoordinates(formData: FormData): { lat: number; lng: number
   if (!latitude && !longitude) return null;
   const lat = Number(latitude);
   const lng = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+  if (!isSuphanBuriCoordinate(lat, lng)) {
     return undefined;
   }
   return { lat, lng };

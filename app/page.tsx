@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllReviews } from "@/lib/supabase";
 import { getCategories } from "@/lib/categories";
 import ReviewCard from "@/components/review-card";
+import TrendingVideoCard from "@/components/trending-video-card";
 
 // app/page.tsx — Home Page (Server Component, SSR)
 // Hero + Search + Category tabs + Trending rail + latest reviews grid.
@@ -77,10 +78,10 @@ export default async function HomePage() {
 
       {trending.length > 0 && (
         <section className="px-4 py-8 sm:px-8">
-          <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">กำลังมาแรงตอนนี้</h2>
+          <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">วิดีโอมาแรง</h2>
           <div className="flex gap-4 overflow-x-auto pb-2">
             {trending.map((review) => (
-              <ReviewCard key={review.id} review={review} variant="rail" className="w-36 flex-none sm:w-44" />
+              <TrendingVideoCard key={review.id} review={review} className="w-36 flex-none sm:w-44" />
             ))}
           </div>
         </section>

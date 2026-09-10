@@ -2,42 +2,49 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getReviewsByCategory } from "@/lib/supabase";
 import { CATEGORY_LABEL, isValidCategory } from "@/lib/categories";
+import { pageOffset, parsePage, REVIEWS_PER_PAGE } from "@/lib/pagination";
 import ReviewCard from "@/components/review-card";
+import Pagination from "@/components/pagination";
 
 // app/category/[category]/page.tsx — Category Page (Server Component, SSR)
 // e.g. /category/food -> "ร้านอาหารสุพรรณบุรี"
 
-// revalidate = 60: กันปัญหาหน้า static ค้างข้อมูลเก่า (ดูคำอธิบายเต็มใน app/page.tsx)
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { category: string };
+  params: Promise<{ category: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  if (!isValidCategory(params.category)) {
+  const { category } = await params;
+  if (!isValidCategory(category)) {
     return { title: "ไม่พบหมวดหมู่นี้", robots: { index: false, follow: true } };
   }
 
-  const label = CATEGORY_LABEL[params.category];
+  const label = CATEGORY_LABEL[category];
   return {
     title: `${label}สุพรรณบุรี รวมรีวิวล่าสุด`,
     description: `รวมรีวิว${label}สุพรรณบุรี พร้อมคลิปวิดีโอจาก Facebook และ TikTok อัปเดตล่าสุด | ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี`,
   };
 }
 
-export default async function CategoryPage({ params }: PageProps) {
-  if (!isValidCategory(params.category)) {
+export default async function CategoryPage({ params, searchParams }: PageProps) {
+  const { category } = await params;
+  if (!isValidCategory(category)) {
     notFound();
   }
 
-  const label = CATEGORY_LABEL[params.category];
-  const reviews = await getReviewsByCategory(params.category, 24);
+  const label = CATEGORY_LABEL[category];
+  const page = parsePage((await searchParams).page);
+  const fetchedReviews = await getReviewsByCategory(category, REVIEWS_PER_PAGE + 1, pageOffset(page));
+  const hasNextPage = fetchedReviews.length > REVIEWS_PER_PAGE;
+  const reviews = fetchedReviews.slice(0, REVIEWS_PER_PAGE);
 
   return (
     <main className="px-4 py-8 sm:px-8">
       <nav aria-label="breadcrumb" className="mb-4">
-        <ol className="flex flex-wrap items-center gap-1 text-xs text-neutral-400">
+        <ol className="flex flex-wrap items-center gap-1 text-xs text-neutral-600 dark:text-neutral-300">
           <li>
             <a href="/" className="hover:text-[#FF4B12]">
               หน้าแรก
@@ -56,16 +63,19 @@ export default async function CategoryPage({ params }: PageProps) {
       </p>
 
       {reviews.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {reviews.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </div>
+        </>
       ) : (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
           ยังไม่มีรีวิวในหมวดหมู่นี้
         </div>
       )}
+      <Pagination page={page} hasNextPage={hasNextPage} pathname={`/category/${category}`} />
     </main>
   );
 }

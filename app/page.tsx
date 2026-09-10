@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllReviews } from "@/lib/supabase";
 import { CATEGORIES } from "@/lib/categories";
+import { pageOffset, parsePage } from "@/lib/pagination";
 import ReviewCard from "@/components/review-card";
+import Pagination from "@/components/pagination";
 
 // app/page.tsx — Home Page (Server Component, SSR)
 // Hero + Search + Category tabs + Trending rail + latest reviews grid.
@@ -15,18 +17,23 @@ export const metadata: Metadata = {
     "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok ครบทุกอำเภอ อัปเดตทุกสัปดาห์",
 };
 
-// สำคัญ: หน้านี้เป็น Server Component ไม่มี dynamic API (cookies/headers/searchParams)
-// เลย Next.js จะ prerender เป็นไฟล์ static ตอน build ครั้งเดียวแล้วใช้ซ้ำตลอด
-// (ตอนนั้นตาราง reviews ยังว่างอยู่ หน้าเว็บเลยค้างโชว์ "ยังไม่มีรีวิว" แม้จะเพิ่มข้อมูลใน
-// Supabase ไปแล้วก็ตาม) revalidate = 60 สั่งให้ Next.js สร้างหน้าใหม่จาก Supabase
-// อัตโนมัติทุก 60 วินาที — เร็วเหมือน static เดิม แต่ข้อมูลไม่ค้าง
-export const revalidate = 60;
+// Query Supabase at request time so a transient database outage never blocks
+// deployment. app/error.tsx presents an honest retry state if it is unavailable.
+export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
-  const reviews = await getAllReviews(12);
-  // เดโม: ใช้รีวิวล่าสุด 5 รายการแทน "กำลังมาแรง" ไปก่อน — ถ้าอยากจัดอันดับจริง
-  // แนะนำเพิ่มคอลัมน์ view_count แล้วเปลี่ยน order() เป็น view_count desc
-  const trending = reviews.slice(0, 5);
+interface HomePageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const page = parsePage((await searchParams).page);
+  const pageSize = 12;
+  const fetchedReviews = await getAllReviews(pageSize + 1, pageOffset(page, pageSize));
+  const hasNextPage = fetchedReviews.length > pageSize;
+  const reviews = fetchedReviews.slice(0, pageSize);
+  // These are newest reviews, not a popularity ranking. Keep the label honest
+  // until the product has a real view/ranking signal.
+  const newestReviews = reviews.slice(0, 5);
 
   return (
     <main>
@@ -37,7 +44,7 @@ export default async function HomePage() {
         <h1 className="max-w-xl font-[family-name:var(--font-kanit)] text-2xl font-extrabold leading-tight sm:text-4xl">
           รวมรีวิวสุพรรณบุรี ที่เที่ยว ร้านอาหาร อัปเดตล่าสุด
         </h1>
-        <p className="mt-3 max-w-md text-sm text-white/90 sm:text-base">
+        <p className="mt-3 max-w-md text-sm text-white sm:text-base">
           คลิปรีวิวจาก TikTok และ Facebook ครบทุกอำเภอเมือง สามชุก อู่ทอง และศรีประจันต์ อัปเดตทุกสัปดาห์
         </p>
 
@@ -74,11 +81,11 @@ export default async function HomePage() {
         </ul>
       </section>
 
-      {trending.length > 0 && (
+      {page === 1 && newestReviews.length > 0 && (
         <section className="px-4 py-8 sm:px-8">
-          <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">กำลังมาแรงตอนนี้</h2>
+          <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">รีวิวใหม่ล่าสุด</h2>
           <div className="flex gap-4 overflow-x-auto pb-2">
-            {trending.map((review) => (
+            {newestReviews.map((review) => (
               <ReviewCard key={review.id} review={review} variant="rail" className="w-36 flex-none sm:w-44" />
             ))}
           </div>
@@ -99,6 +106,7 @@ export default async function HomePage() {
             <code className="rounded bg-neutral-200 px-1 py-0.5 dark:bg-neutral-800">reviews</code> ของ Supabase ได้เลย
           </div>
         )}
+        <Pagination page={page} hasNextPage={hasNextPage} pathname="/" />
       </section>
     </main>
   );

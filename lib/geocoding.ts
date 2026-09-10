@@ -1,4 +1,5 @@
 import "server-only";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 // lib/geocoding.ts
 // แปลง "ข้อความสถานที่" ที่อยู่ในแคปชั่น Facebook ให้กลายเป็นพิกัด lat/lng
@@ -48,19 +49,17 @@ const DISTRICT_PATTERNS: { canonical: string; aliases: string[] }[] = [
   { canonical: "อู่ทอง สุพรรณบุรี", aliases: ["อู่ทอง"] },
 ];
 
-/** ถ้าไม่เจออำเภอไหนเลย — ปักหมุดระดับจังหวัดไว้ก่อน ดีกว่าไม่มีหมุดเลย */
-const PROVINCE_FALLBACK = "สุพรรณบุรี";
-
 /**
  * ถอด "ชื่ออำเภอ" ออกจากแคปชั่น แล้วคืนเป็นวลีเต็มที่พร้อมส่งเข้า Geocoding
- * เช่น "ร้านนี้อยู่ อ.เมือง นะ" -> "อำเภอเมืองสุพรรณบุรี"
- * ถ้าไม่เจออำเภอไหนเลย fallback เป็น "สุพรรณบุรี" (ระดับจังหวัด)
+ * เช่น "ร้านนี้อยู่ อ.เมือง นะ" -> "อำเภอเมืองสุพรรณบุรี". If the caption
+ * has no usable district, return null rather than publishing a province-centre
+ * pin that could be mistaken for the reviewed business.
  *
  * Extract a Suphanburi district name from a caption and return the full search
- * phrase. Falls back to the province name when nothing matches.
+ * phrase. Returns null when the caption does not identify a district.
  */
 export function extractLocationFromCaption(caption: string): string | null {
-  if (!caption) return PROVINCE_FALLBACK;
+  if (!caption) return null;
 
   for (const { canonical, aliases } of DISTRICT_PATTERNS) {
     if (aliases.some((alias) => caption.includes(alias))) {
@@ -68,7 +67,7 @@ export function extractLocationFromCaption(caption: string): string | null {
     }
   }
 
-  return PROVINCE_FALLBACK;
+  return null;
 }
 
 /**
@@ -103,7 +102,9 @@ export async function geocodeLocation(locationText: string): Promise<GeoPoint | 
     const json = (await res.json()) as {
       status?: string;
       error_message?: string;
-      results?: { geometry?: { location?: { lat?: number; lng?: number } } }[];
+      results?: {
+        geometry?: { location?: { lat?: number; lng?: number } };
+      }[];
     };
 
     // status ของ Google: OK / ZERO_RESULTS / OVER_QUERY_LIMIT / REQUEST_DENIED / ...
@@ -117,7 +118,8 @@ export async function geocodeLocation(locationText: string): Promise<GeoPoint | 
       return null;
     }
 
-    const location = json.results?.[0]?.geometry?.location;
+    const result = json.results?.[0];
+    const location = result?.geometry?.location;
     const lat = location?.lat;
     const lng = location?.lng;
 
@@ -126,7 +128,8 @@ export async function geocodeLocation(locationText: string): Promise<GeoPoint | 
       typeof lat !== "number" ||
       typeof lng !== "number" ||
       !Number.isFinite(lat) ||
-      !Number.isFinite(lng)
+      !Number.isFinite(lng) ||
+      !isSuphanBuriCoordinate(lat, lng)
     ) {
       return null;
     }

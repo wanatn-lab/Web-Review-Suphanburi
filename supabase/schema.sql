@@ -1,67 +1,68 @@
--- supabase/schema.sql
--- Run this in Supabase SQL Editor to create the "reviews" table.
+-- Fresh-install schema for Review Suphanburi.
+-- For a database that already has the old reviews table, run migrations
+-- 002 through 008 in order instead of running this file.
+
+create extension if not exists pgcrypto;
 
 create table if not exists public.reviews (
-  id               uuid primary key default gen_random_uuid(),
-  slug             text unique not null,
-  title            text not null,
-  excerpt          text,
-  content          text,
-  caption          text,              -- raw caption pulled from the Facebook post
-  cover_image      text,
-  category         text not null check (category in ('food','cafe','trip','stay','market')),
-  source           text not null default 'facebook_auto'
-                   check (source in ('facebook_auto','manual')),
-  facebook_embed_url text,
-  tiktok_embed_url text,
-  location_name    text,              -- e.g. "อ.เมือง จ.สุพรรณบุรี"
-  district         text,              -- e.g. "อำเภอเมือง"
-  location_lat     double precision,
-  location_lng     double precision,
-  hashtags         text[],
-  view_count       integer default 0,
-  published_at     timestamptz default now(),
-  created_at       timestamptz default now()
+  id                    uuid primary key default gen_random_uuid(),
+  slug                  text unique not null,
+  title                 text not null,
+  description           text,
+  category              text check (category in ('food', 'cafe', 'trip', 'stay', 'market')),
+  cover_image           text,
+  facebook_embed_url    text,
+  tiktok_embed_url      text,
+  google_map_embed_url  text,
+  latitude              double precision check (latitude is null or latitude between 13.95 and 15.25),
+  longitude             double precision check (longitude is null or longitude between 99.15 and 100.45),
+  location_text         text,
+  facebook_post_id      text,
+  source                text not null default 'facebook_auto'
+                        check (source in ('facebook_auto', 'manual')),
+  created_at            timestamptz not null default now()
 );
 
-create index if not exists reviews_category_idx on public.reviews (category);
-create index if not exists reviews_published_at_idx on public.reviews (published_at desc);
+create index if not exists reviews_category_idx
+  on public.reviews (category);
+create index if not exists reviews_created_at_idx
+  on public.reviews (created_at desc);
+create unique index if not exists reviews_facebook_post_id_key
+  on public.reviews (facebook_post_id)
+  where facebook_post_id is not null;
 
--- Public read access (this table has no PII — safe to expose via anon key)
+-- Public read access only. Content changes are made by server routes using
+-- the service-role key, which bypasses RLS; the browser anon key cannot write.
 alter table public.reviews enable row level security;
-create policy "Public reviews are viewable by everyone"
-  on public.reviews for select
-  using (true);
 
--- Mock data matching the PRD examples
-insert into public.reviews
-  (slug, title, excerpt, category, cover_image, facebook_embed_url,
-   location_name, district, location_lat, location_lng, hashtags, published_at)
-values
-  (
-    'khao-man-kai-kim-ngek',
-    'ร้านข้าวมันไก่กิมเง็ก',
-    'ข้าวมันไก่สูตรโบราณ เนื้อไก่นุ่ม น้ำจิ้มรสจัดจ้าน ร้านเก่าแก่กลางเมืองสุพรรณบุรี',
-    'food',
-    'https://example.com/images/khao-man-kai-kim-ngek.jpg',
-    'https://www.facebook.com/watch/?v=1234567890',
-    'อ.เมือง จ.สุพรรณบุรี',
-    'อำเภอเมือง',
-    14.4744, 100.1177,
-    array['ร้านอาหารสุพรรณบุรี','ข้าวมันไก่','ReviewSuphan'],
-    now()
-  ),
-  (
-    'dim-sum-gopi-lang-rong-mai',
-    'ร้านติ่มซำโกปี๊ หลังโรงไม้',
-    'ติ่มซำสูตรต้นตำรับ นึ่งร้อนๆ เสิร์ฟไว บรรยากาศร้านเก่าย่านหลังโรงไม้',
-    'food',
-    'https://example.com/images/dim-sum-gopi.jpg',
-    'https://www.facebook.com/watch/?v=0987654321',
-    'อ.เมือง จ.สุพรรณบุรี',
-    'อำเภอเมือง',
-    14.4700, 100.1150,
-    array['ร้านอาหารสุพรรณบุรี','ติ่มซำ','ReviewSuphan'],
-    now()
-  )
-on conflict (slug) do nothing;
+-- New Supabase projects can require explicit Data API privileges. Grant only
+-- read access to public roles; RLS below still decides which rows are visible.
+grant usage on schema public to anon, authenticated;
+grant select on table public.reviews to anon, authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'reviews'
+      and policyname = 'Public reviews are viewable by everyone'
+  ) then
+    create policy "Public reviews are viewable by everyone"
+      on public.reviews for select using (true);
+  end if;
+end
+$$;
+
+-- Token storage used only by server-side Facebook refresh/sync routes.
+create table if not exists public.facebook_tokens (
+  page_id      text primary key,
+  access_token text not null,
+  expires_at   timestamptz not null,
+  updated_at   timestamptz not null default now()
+);
+
+alter table public.facebook_tokens enable row level security;
+
+-- No mock reviews are inserted here. A new production database starts empty
+-- until content is added through the admin workflow or Facebook sync.

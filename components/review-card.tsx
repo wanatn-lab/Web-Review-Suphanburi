@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CATEGORY_BADGE_CLASS, CATEGORY_LABEL } from "@/lib/categories";
 import PinIcon from "@/components/pin-icon";
 import ShareButton from "@/components/share-button";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import type { Review } from "@/lib/supabase";
 
 // components/review-card.tsx
@@ -16,7 +17,7 @@ import type { Review } from "@/lib/supabase";
 // z-index ต่ำสุด ให้คลิกตรงไหนของการ์ดก็เข้าเพจรีวิวได้ ส่วนปุ่ม "แชร์"/"Maps"
 // ถูกยกไปไว้ z-10 (สูงกว่า) จึงกดแยกจากลิงก์หลักได้โดยไม่ต้องพึ่ง JS พิเศษ
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
 function PlayBadge() {
   // ตำแหน่ง "มุมขวาบน" ให้ตรงกับ mockup ต้นแบบ (suphanburireviewhub_1.html:
@@ -55,7 +56,7 @@ function Thumb({ review }: { review: Review }) {
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" stroke="none">
             <polygon points="8,5 19,12 8,19" />
           </svg>
-          <span className="text-[0.65rem] leading-tight text-neutral-400">
+          <span className="text-[0.65rem] leading-tight text-neutral-600 dark:text-neutral-300">
             วิดีโอรีวิว
             <br />
             lazy-loaded · 9:16
@@ -82,7 +83,7 @@ export default function ReviewCard({
   const label = review.category ? CATEGORY_LABEL[review.category] ?? review.category : null;
   const href = `/reviews/${review.slug}`;
   const canonicalUrl = `${SITE_URL}${href}`;
-  const hasGeo = review.latitude != null && review.longitude != null;
+  const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
   const mapsUrl =
     hasGeo ? `https://maps.google.com/?q=${review.latitude},${review.longitude}` : null;
 
@@ -144,7 +145,7 @@ export default function ReviewCard({
         </div>
 
         {(review.location_text || review.created_at) && (
-          <ul className="flex flex-wrap gap-3 text-xs text-neutral-400">
+          <ul className="flex flex-wrap gap-3 text-xs text-neutral-600 dark:text-neutral-300">
             {review.location_text && (
               <li className="inline-flex items-center gap-1">
                 <PinIcon className="h-3 w-3" />
@@ -162,7 +163,7 @@ export default function ReviewCard({
               href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#FF4B12] px-2.5 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-[#B62F08]"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#B62F08] px-3 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-[#8F2506]"
             >
               <PinIcon className="h-3 w-3" color="text-white" />
               Maps

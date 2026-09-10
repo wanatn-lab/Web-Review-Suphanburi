@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; edit?: string; error?: string; sent?: string };
+  searchParams: Promise<{ created?: string; updated?: string; edit?: string; error?: string; sent?: string }>;
 }
 
 interface ManualReviewListItem {
@@ -77,10 +77,11 @@ async function getRecentManualReviews(): Promise<ManualReviewListItem[]> {
 }
 
 export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
   const adminEmail = await getAuthenticatedAdminEmail();
   const authenticated = adminEmail !== null;
   const configured = getAllowedAdminEmails().length > 0;
-  const errorMessage = searchParams.error ? errorMessages[searchParams.error] : null;
+  const errorMessage = params.error ? errorMessages[params.error] : null;
 
   if (!authenticated) {
     return (
@@ -98,7 +99,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
           {errorMessage && (
             <div className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">{errorMessage}</div>
           )}
-          {searchParams.sent === "1" && (
+          {params.sent === "1" && (
             <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
               ส่งลิงก์เข้าสู่ระบบแล้ว กรุณาเปิดอีเมลและกดลิงก์ภายใน 1 ชั่วโมง
             </div>
@@ -130,7 +131,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
   }
 
   const [editReview, recentReviews] = await Promise.all([
-    searchParams.edit ? getManualReview(searchParams.edit) : Promise.resolve(null),
+    params.edit ? getManualReview(params.edit) : Promise.resolve(null),
     getRecentManualReviews(),
   ]);
 
@@ -149,17 +150,17 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         </form>
       </div>
 
-      {searchParams.created && (
+      {params.created && (
         <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
-          บันทึกเรียบร้อยแล้ว — <Link href={`/reviews/${searchParams.created}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
+          บันทึกเรียบร้อยแล้ว — <Link href={`/reviews/${params.created}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
         </div>
       )}
-      {searchParams.updated && (
+      {params.updated && (
         <div className="mt-6 rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
-          แก้ไขเรียบร้อยแล้ว — <Link href={`/reviews/${searchParams.updated}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
+          แก้ไขเรียบร้อยแล้ว — <Link href={`/reviews/${params.updated}`} className="font-bold underline">เปิดหน้ารีวิว</Link>
         </div>
       )}
-      {searchParams.edit && !editReview && (
+      {params.edit && !editReview && (
         <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           ไม่พบรายการ Manual ที่ต้องการแก้ไข
         </div>

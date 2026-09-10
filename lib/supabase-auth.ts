@@ -13,8 +13,8 @@ function getSupabaseAuthConfig() {
   return { url, key };
 }
 
-export function createServerSupabaseAuthClient() {
-  const cookieStore = cookies();
+export async function createServerSupabaseAuthClient() {
+  const cookieStore = await cookies();
   const { url, key } = getSupabaseAuthConfig();
 
   return createServerClient(url, key, {
@@ -46,7 +46,7 @@ export function isAllowedAdminEmail(email: string | null | undefined): boolean {
 }
 
 export async function getAuthenticatedAdminEmail(): Promise<string | null> {
-  const supabase = createServerSupabaseAuthClient();
+  const supabase = await createServerSupabaseAuthClient();
   const {
     data: { user },
     error,

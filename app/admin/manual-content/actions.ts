@@ -197,7 +197,7 @@ export async function loginAdmin(formData: FormData) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
   const callbackUrl = new URL("/auth/callback?next=/admin/manual-content", siteUrl).toString();
-  const supabase = createServerSupabaseAuthClient();
+  const supabase = await createServerSupabaseAuthClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: normalizedEmail,
     options: { emailRedirectTo: callbackUrl },
@@ -212,7 +212,7 @@ export async function loginAdmin(formData: FormData) {
 }
 
 export async function logoutAdmin() {
-  const supabase = createServerSupabaseAuthClient();
+  const supabase = await createServerSupabaseAuthClient();
   await supabase.auth.signOut();
   redirect(ADMIN_PATH);
 }

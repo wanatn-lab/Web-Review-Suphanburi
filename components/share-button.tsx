@@ -49,7 +49,7 @@ export default function ShareButton({
     <button
       type="button"
       onClick={handleShare}
-      className={`inline-flex items-center gap-1.5 rounded-full border border-[#FFDD00] bg-[#FFDD00] font-semibold text-[#5C4400] transition hover:brightness-95 ${
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[#FFDD00] bg-[#FFDD00] font-semibold text-[#3F2F00] transition hover:brightness-95 ${
         compact ? "px-2.5 py-1 text-[0.7rem]" : "px-3 py-1.5 text-xs"
       }`}
     >

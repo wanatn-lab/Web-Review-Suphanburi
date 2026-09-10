@@ -24,7 +24,7 @@ const notoSansThai = Noto_Sans_Thai({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -79,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <h2 className="font-[family-name:var(--font-kanit)] text-sm font-bold uppercase tracking-wide text-[#FFD9C2]">
                 รีวิวสุพรรณบุรี
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-[#FBDDCD]">
+              <p className="mt-2 text-sm leading-relaxed text-[#FFF0E8]">
                 คลังคลิปวิดีโอรีวิวร้านอาหาร คาเฟ่ และที่เที่ยวในจังหวัดสุพรรณบุรี จากคอนเทนต์บนโซเชียลมีเดียของเรา
                 อัปเดตทุกสัปดาห์
               </p>
@@ -91,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ul className="mt-2 flex flex-col gap-2 text-sm">
                 {CATEGORIES.map((c) => (
                   <li key={c.slug}>
-                    <Link href={`/category/${c.slug}`} className="text-[#FBDDCD] hover:text-white">
+                    <Link href={`/category/${c.slug}`} className="text-[#FFF0E8] hover:text-white">
                       {c.label}สุพรรณบุรี
                     </Link>
                   </li>
@@ -102,10 +102,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <h2 className="font-[family-name:var(--font-kanit)] text-sm font-bold uppercase tracking-wide text-[#FFD9C2]">
                 ติดต่อเรา
               </h2>
-              <p className="mt-2 text-sm text-[#FBDDCD]">อีเมล: hello@reviewsuphan.com</p>
+              <p className="mt-2 text-sm text-[#FFF0E8]">อีเมล: hello@reviewsuphan.com</p>
             </div>
           </div>
-          <div className="border-t border-white/15 px-4 py-4 text-center text-xs text-[#F0C1A8] sm:px-8">
+          <div className="border-t border-white/15 px-4 py-4 text-center text-xs text-[#FFF0E8] sm:px-8">
             © {new Date().getFullYear() + 543} รีวิวสุพรรณบุรี
           </div>
         </footer>

@@ -5,7 +5,11 @@ import { CATEGORIES } from "@/lib/categories";
 // app/sitemap.ts — Next.js auto-serves this at /sitemap.xml
 // ดึงรีวิวทั้งหมดจาก Supabase มาขึ้น sitemap อัตโนมัติ ไม่ต้องอัปเดตมือ
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+
+// Sitemap also queries Supabase, so defer it to request time. This prevents a
+// temporary database outage from blocking an otherwise valid deployment.
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const reviews = await getAllReviews(500);

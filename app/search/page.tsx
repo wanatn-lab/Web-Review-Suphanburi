@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { searchReviews } from "@/lib/supabase";
+import { pageOffset, parsePage, REVIEWS_PER_PAGE } from "@/lib/pagination";
 import ReviewCard from "@/components/review-card";
+import Pagination from "@/components/pagination";
 
 // app/search/page.tsx — ปลายทางของช่องค้นหาบน Home Page
 // ไม่ index หน้านี้ (กัน duplicate content จาก query string ต่างๆ)
 
 interface PageProps {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string; page?: string }>;
 }
 
-export function generateMetadata({ searchParams }: PageProps): Metadata {
-  const q = searchParams.q?.trim() ?? "";
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const q = params.q?.trim() ?? "";
   return {
     title: q ? `ผลค้นหา "${q}"` : "ค้นหารีวิว",
     robots: { index: false, follow: true },
@@ -18,8 +21,12 @@ export function generateMetadata({ searchParams }: PageProps): Metadata {
 }
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const q = searchParams.q?.trim() ?? "";
-  const results = q ? await searchReviews(q, 24) : [];
+  const params = await searchParams;
+  const q = params.q?.trim() ?? "";
+  const page = parsePage(params.page);
+  const fetchedResults = q ? await searchReviews(q, REVIEWS_PER_PAGE + 1, pageOffset(page)) : [];
+  const hasNextPage = fetchedResults.length > REVIEWS_PER_PAGE;
+  const results = fetchedResults.slice(0, REVIEWS_PER_PAGE);
 
   return (
     <main className="px-4 py-8 sm:px-8">
@@ -33,16 +40,19 @@ export default async function SearchPage({ searchParams }: PageProps) {
       </p>
 
       {results.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {results.map((review) => (
-            <ReviewCard key={review.id} review={review} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {results.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </div>
+        </>
       ) : q ? (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
           ไม่พบผลลัพธ์สำหรับ &quot;{q}&quot; ลองคำค้นหาอื่นดูนะ
         </div>
       ) : null}
+      {q && <Pagination page={page} hasNextPage={hasNextPage} pathname="/search" query={q} />}
     </main>
   );
 }

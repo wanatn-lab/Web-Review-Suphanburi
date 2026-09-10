@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getReviewBySlug } from "@/lib/supabase";
 import { CATEGORY_LABEL } from "@/lib/categories";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 // app/reviews/[slug]/page.tsx
 // Review Detail Page — Server Component (SSR), Dynamic Route.
@@ -10,23 +11,20 @@ import { CATEGORY_LABEL } from "@/lib/categories";
 // (LocalBusiness, Geo-SEO) server-side, and lazy-loads every embed
 // (Facebook video, TikTok video, Google Map) so first paint stays fast.
 //
-// NOTE (Next.js 15+): `params` becomes a Promise in Next 15 — change every
-// `params.slug` below to `const { slug } = await params;` if you're on 15.
-// This file targets the Next.js 14 App Router baseline.
+// Route parameters are awaited to match the Next.js 16 App Router API.
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphan.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 
-// revalidate = 60: กันปัญหาหน้า static ค้างข้อมูลเก่า (ดูคำอธิบายเต็มใน app/page.tsx)
-// สำคัญมากสำหรับหน้านี้ เพราะรีวิวใหม่จาก Facebook auto-sync ต้องขึ้นหน้าเว็บได้เอง
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const review = await getReviewBySlug(params.slug);
+  const { slug } = await params;
+  const review = await getReviewBySlug(slug);
 
   if (!review) {
     return {
@@ -56,7 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       locale: "th_TH",
       type: "article",
       images: review.cover_image
-        ? [{ url: review.cover_image, width: 1200, height: 630, alt: review.title }]
+        ? [{ url: review.cover_image, alt: review.title }]
         : [],
     },
     twitter: {
@@ -69,7 +67,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ReviewDetailPage({ params }: PageProps) {
-  const review = await getReviewBySlug(params.slug);
+  const { slug } = await params;
+  const review = await getReviewBySlug(slug);
 
   if (!review) {
     // ไม่พบข้อมูล -> Next.js render app/not-found.tsx (โทนส้ม/ขาวตรงแบรนด์)
@@ -77,32 +76,44 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   }
 
   const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
-  const hasGeo = review.latitude != null && review.longitude != null;
+  const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
 
-  // ใช้ google_map_embed_url ที่เก็บไว้ก่อน ถ้าไม่มีค่อย fallback ไปสร้างจาก lat/lng
-  const mapSrc =
-    review.google_map_embed_url ??
-    (hasGeo ? `https://www.google.com/maps?q=${review.latitude},${review.longitude}&z=16&output=embed` : null);
+  // Only use coordinates inside Suphan Buri. Older rows may contain an
+  // incorrect third-party embed URL, so derive the map from validated data.
+  const mapSrc = hasGeo ? `https://www.google.com/maps?q=${review.latitude},${review.longitude}&z=16&output=embed` : null;
   const directionsUrl = hasGeo
     ? `https://maps.google.com/?q=${review.latitude},${review.longitude}`
     : null;
 
-  // ---- JSON-LD: LocalBusiness สำหรับ Geo-SEO เจาะจงพื้นที่สุพรรณบุรี ----
+  const schemaType =
+    review.category === "food"
+      ? "Restaurant"
+      : review.category === "cafe"
+        ? "CafeOrCoffeeShop"
+        : review.category === "stay"
+          ? "LodgingBusiness"
+          : review.category === "market"
+            ? "ShoppingCenter"
+            : review.category === "trip"
+              ? "TouristAttraction"
+              : "Place";
+
+  // ---- JSON-LD: use a type that matches the review category. ----
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": schemaType,
     name: review.title,
     description: review.description ?? `รีวิว ${review.title} จังหวัดสุพรรณบุรี`,
     url: canonicalUrl,
     image: review.cover_image ?? undefined,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "สุพรรณบุรี",
-      addressRegion: "สุพรรณบุรี",
-      addressCountry: "TH",
-    },
   };
   if (hasGeo) {
+    jsonLd.address = {
+      "@type": "PostalAddress",
+      addressLocality: review.location_text ?? "สุพรรณบุรี",
+      addressRegion: "สุพรรณบุรี",
+      addressCountry: "TH",
+    };
     jsonLd.geo = {
       "@type": "GeoCoordinates",
       latitude: review.latitude,
@@ -117,7 +128,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString }} />
 
       <nav aria-label="breadcrumb" className="px-4 pt-4 sm:px-8">
-        <ol className="flex flex-wrap items-center gap-1 text-xs text-neutral-400">
+        <ol className="flex flex-wrap items-center gap-1 text-xs text-neutral-600 dark:text-neutral-300">
           <li className="flex items-center gap-1">
             <Link href="/" className="hover:text-[#FF4B12]">
               หน้าแรก
@@ -147,7 +158,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
             <h1 className="max-w-[26ch] text-2xl font-extrabold leading-snug text-neutral-900 dark:text-neutral-50 sm:text-3xl">
               {review.title}
             </h1>
-            <time dateTime={review.created_at} className="text-xs text-neutral-400">
+            <time dateTime={review.created_at} className="text-xs text-neutral-600 dark:text-neutral-300">
               {new Date(review.created_at).toLocaleDateString("th-TH", {
                 day: "numeric",
                 month: "short",
@@ -188,7 +199,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
               href={directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#FF4B12] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]"
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#B62F08] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#8F2506]"
             >
               <PinIcon />
               นำทางไปที่นี่ (Google Maps)
@@ -256,10 +267,10 @@ function VideoEmbed({
         <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#FF4B12]" fill="none" stroke="currentColor" strokeWidth={2}>
           <polygon points="8,5 19,12 8,19" fill="currentColor" stroke="none" />
         </svg>
-        <p className="text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+        <p className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
           ยังไม่มีวิดีโอจาก {label}
           <br />
-          <span className="text-[0.65rem] text-neutral-400 dark:text-neutral-500">
+          <span className="text-[0.65rem] text-neutral-600 dark:text-neutral-300">
             ลิงก์ต้นทางอาจถูกลบหรือเปลี่ยนแปลง
           </span>
         </p>

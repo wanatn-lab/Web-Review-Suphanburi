@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   createManualReview,
   importCaptionDraft,
@@ -90,9 +90,9 @@ function TikTokSubmitButton() {
 }
 
 export function ManualContentForm({ initialReview }: ManualContentFormProps) {
-  const [importState, importAction] = useFormState(importFacebookDraft, initialImportState);
-  const [captionImportState, captionImportAction] = useFormState(importCaptionDraft, initialCaptionImportState);
-  const [tikTokImportState, tikTokImportAction] = useFormState(importTikTokDraft, initialTikTokImportState);
+  const [importState, importAction] = useActionState(importFacebookDraft, initialImportState);
+  const [captionImportState, captionImportAction] = useActionState(importCaptionDraft, initialCaptionImportState);
+  const [tikTokImportState, tikTokImportAction] = useActionState(importTikTokDraft, initialTikTokImportState);
   const [values, setValues] = useState<FormValues>(initialReview ?? emptyValues());
   const isEditing = Boolean(initialReview);
 

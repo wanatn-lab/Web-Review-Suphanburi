@@ -31,7 +31,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="rounded-xl bg-[#FF4B12] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]"
+        className="inline-flex min-h-11 items-center rounded-xl bg-[#B62F08] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#8F2506]"
       >
         กลับหน้าแรก
       </Link>

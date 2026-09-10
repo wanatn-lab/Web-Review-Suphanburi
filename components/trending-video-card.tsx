@@ -15,8 +15,8 @@ function videoSource(review: Review): { provider: VideoProvider; url: string } |
 
 function PlayBadge() {
   return (
-    <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white shadow-sm">
-      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 translate-x-px" fill="currentColor" aria-hidden="true">
+    <span className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white shadow-sm">
+      <svg viewBox="0 0 24 24" className="h-4 w-4 translate-x-px" fill="currentColor" aria-hidden="true">
         <polygon points="8,5 19,12 8,19" />
       </svg>
     </span>
@@ -32,11 +32,7 @@ function PinGlyph() {
   );
 }
 
-/**
- * The trending rail is interactive, but its text remains server-rendered
- * through this Client Component. This preserves crawlable titles while a tap
- * plays video immediately instead of forcing a trip through the detail page.
- */
+/** Tap the cover to play; the stacked overlay keeps map discovery separate. */
 export default function TrendingVideoCard({ review, className = "" }: { review: Review; className?: string }) {
   const source = videoSource(review);
   const badgeClass = review.category
@@ -50,7 +46,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
       : null;
 
-  const cardVisual = (
+  const cover = (
     <div className="relative aspect-[9/16] w-full overflow-hidden bg-neutral-100 text-left dark:bg-neutral-800">
       {review.cover_image ? (
         <Image
@@ -66,10 +62,6 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
         </div>
       )}
       <PlayBadge />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/90 via-black/45 to-transparent p-2.5 pt-10">
-        {label && <span className={`w-fit rounded px-1.5 py-0.5 text-[0.6rem] font-bold ${badgeClass}`}>{label}</span>}
-        <span className="line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white">{review.title}</span>
-      </div>
     </div>
   );
 
@@ -82,27 +74,31 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           title={review.title}
           poster={review.cover_image}
           description={review.description}
-          trigger={cardVisual}
-          triggerClassName="block w-full"
+          trigger={cover}
+          triggerClassName="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#FFDD00]"
         />
       ) : (
         <Link href={`/reviews/${review.slug}`} aria-label={`เปิดรีวิว: ${review.title}`} className="block">
-          {cardVisual}
+          {cover}
         </Link>
       )}
 
-      {mapsUrl && (
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`เปิดพิกัด ${review.title} ใน Google Maps`}
-          className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[0.65rem] font-bold text-[#B62F08] shadow-sm transition hover:bg-white"
-        >
-          <PinGlyph />
-          พิกัด
-        </a>
-      )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-1 bg-gradient-to-t from-black/90 via-black/45 to-transparent p-2.5 pt-12">
+        {mapsUrl && (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`เปิดพิกัด ${review.title} ใน Google Maps`}
+            className="pointer-events-auto inline-flex min-h-9 w-fit items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[0.7rem] font-bold text-[#B62F08] shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFDD00]"
+          >
+            <PinGlyph />
+            พิกัด
+          </a>
+        )}
+        {label && <span className={`w-fit rounded px-1.5 py-0.5 text-[0.6rem] font-bold ${badgeClass}`}>{label}</span>}
+        <span className="line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white">{review.title}</span>
+      </div>
     </div>
   );
 }

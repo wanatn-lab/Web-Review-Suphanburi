@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 // components/video-player.tsx
 // วิดีโอรีวิว "ช่องทางเดียว" (Facebook หรือ TikTok — เลือกโชว์แค่อันที่มีจริง
@@ -41,7 +41,9 @@ function buildEmbedSrc(provider: VideoProvider, url: string): string | null {
   }
   // TikTok: ดึง video id จาก URL แล้วต่อเป็น embed v2 (ไม่ต้องโหลด widget.js ที่หนัก)
   const match = url.match(/video\/(\d+)/);
-  return match ? `https://www.tiktok.com/embed/v2/${match[1]}?autoplay=1` : null;
+  return match
+    ? `https://www.tiktok.com/player/v1/${match[1]}?autoplay=1&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=0&rel=0&native_context_menu=0`
+    : null;
 }
 
 function PlayGlyph({ className = "h-7 w-7 translate-x-[2px]" }: { className?: string }) {
@@ -70,6 +72,7 @@ export function VideoPlayer({
   triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const embedSrc = buildEmbedSrc(provider, url);
   const isYouTube = provider === "youtube";
   const playerSize = isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-sm sm:max-w-md";
@@ -91,6 +94,17 @@ export function VideoPlayer({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
+
+  // TikTok Player รองรับ postMessage โดยตรง จึงสั่ง unmute/play หลังการแตะเปิดได้
+  // (เบราว์เซอร์อาจยังบังคับ mute ได้ตามนโยบายของอุปกรณ์).
+  function handlePlayerLoad() {
+    if (provider !== "tiktok") return;
+    const playerWindow = iframeRef.current?.contentWindow;
+    if (!playerWindow) return;
+    const message = { "x-tiktok-player": true, type: "unMute", value: undefined };
+    playerWindow.postMessage(message, "https://www.tiktok.com");
+    playerWindow.postMessage({ "x-tiktok-player": true, type: "play", value: undefined }, "https://www.tiktok.com");
+  }
 
   // ลิงก์ต้นทางพัง/parse ไม่ได้ -> ไม่ต้องแสดงอะไรเลย (ไม่มีกล่องหลอกๆ)
   if (!embedSrc) return null;
@@ -134,7 +148,7 @@ export function VideoPlayer({
           aria-modal="true"
           aria-label={`วิดีโอเต็มจอ: ${title}`}
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-50 flex flex-col bg-black"
+          className="fixed inset-0 z-[60] flex flex-col bg-black"
         >
           <div className="flex flex-shrink-0 items-center justify-end p-3">
             <button
@@ -155,7 +169,9 @@ export function VideoPlayer({
               onClick={(event) => event.stopPropagation()}
             >
               <iframe
+                ref={iframeRef}
                 src={embedSrc}
+                onLoad={handlePlayerLoad}
                 title={`วิดีโอรีวิวเต็มจอ: ${title}`}
                 className="absolute inset-0 h-full w-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

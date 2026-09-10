@@ -1,42 +1,38 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
 import PinIcon from "@/components/pin-icon";
 import ShareButton from "@/components/share-button";
+import { VideoPlayer, type VideoProvider } from "@/components/video-player";
 import type { Review } from "@/lib/supabase";
-
-// components/review-card.tsx
-// ตรงกับ UI ต้นแบบ 2 รูปแบบ:
-//  - variant="rail"  → การ์ดในแถบ "กำลังมาแรงตอนนี้" (ภาพเต็ม + tag/ชื่อ/พิกัด
-//    ซ้อนบนภาพแบบไล่เฉด ไม่มีกรอบขาวด้านล่าง)
-//  - variant="grid"  → การ์ดในฟีดหลัก/หน้าหมวดหมู่/ผลค้นหา (ภาพ + กล่องเนื้อหา
-//    สีขาว: tag, ชื่อ, คำโปรย, hashtag, พิกัด, ปุ่มแชร์ + ปุ่ม Maps)
-//
-// ทั้งสองแบบใช้เทคนิค "stretched link": มี <Link> โปร่งใสคลุมทั้งการ์ดไว้ที่
-// z-index ต่ำสุด ให้คลิกตรงไหนของการ์ดก็เข้าเพจรีวิวได้ ส่วนปุ่ม "แชร์"/"Maps"
-// ถูกยกไปไว้ z-10 (สูงกว่า) จึงกดแยกจากลิงก์หลักได้โดยไม่ต้องพึ่ง JS พิเศษ
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
 function PlayBadge() {
-  // ตำแหน่ง "มุมขวาบน" ให้ตรงกับ mockup ต้นแบบ (suphanburireviewhub_1.html:
-  // .video-thumb .play-badge { top:.55rem; right:.55rem })
   return (
     <div className="absolute right-2 top-2 z-[1] flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white">
-      <svg viewBox="0 0 24 24" className="h-3 w-3 translate-x-[1px]" fill="currentColor" stroke="none">
+      <svg viewBox="0 0 24 24" className="h-3 w-3 translate-x-[1px]" fill="currentColor" stroke="none" aria-hidden="true">
         <polygon points="8,5 19,12 8,19" />
       </svg>
     </div>
   );
 }
 
-/** จัดวันที่แบบไทยให้ตรงกับ mockup เช่น "15 ส.ค. 2569" */
 function formatThaiDate(iso: string) {
   return new Date(iso).toLocaleDateString("th-TH", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+}
+
+function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
+  if (review.facebook_embed_url) return { provider: "facebook", url: review.facebook_embed_url };
+  if (review.tiktok_embed_url) return { provider: "tiktok", url: review.tiktok_embed_url };
+  if (review.youtube_embed_url) return { provider: "youtube", url: review.youtube_embed_url };
+  return null;
 }
 
 function Thumb({ review }: { review: Review }) {
@@ -52,7 +48,7 @@ function Thumb({ review }: { review: Review }) {
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center text-[#FF4B12]">
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" stroke="none">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" stroke="none" aria-hidden="true">
             <polygon points="8,5 19,12 8,19" />
           </svg>
           <span className="text-[0.65rem] leading-tight text-neutral-400">
@@ -83,10 +79,9 @@ export default function ReviewCard({
   const href = `/reviews/${review.slug}`;
   const canonicalUrl = `${SITE_URL}${href}`;
   const hasGeo = review.latitude != null && review.longitude != null;
-  const mapsUrl =
-    hasGeo ? `https://maps.google.com/?q=${review.latitude},${review.longitude}` : null;
+  const mapsUrl = hasGeo ? `https://maps.google.com/?q=${review.latitude},${review.longitude}` : null;
+  const video = videoSource(review);
 
-  // --- Rail variant: การ์ด "กำลังมาแรงตอนนี้" — ภาพเต็ม + ข้อความซ้อนบนภาพ ---
   if (variant === "rail") {
     return (
       <Link
@@ -98,9 +93,7 @@ export default function ReviewCard({
           {label && (
             <span className={`w-fit rounded px-1.5 py-0.5 text-[0.6rem] font-bold ${badgeClass}`}>{label}</span>
           )}
-          <span className="line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white">
-            {review.title}
-          </span>
+          <span className="line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white">{review.title}</span>
           {review.location_text && (
             <span className="inline-flex items-center gap-1 text-[0.66rem] text-[#F3D9CC]">
               <PinIcon className="h-2.5 w-2.5" />
@@ -112,30 +105,41 @@ export default function ReviewCard({
     );
   }
 
-  // --- Grid variant: การ์ดฟีดหลัก/หมวดหมู่/ค้นหา — ภาพ + กล่องเนื้อหาสีขาว ---
   return (
     <div
       className={`group relative flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 ${className}`}
     >
-      <Link href={href} className="absolute inset-0" aria-label={review.title}>
+      <Link href={href} className="absolute inset-0 z-0" aria-label={`เปิดรายละเอียด: ${review.title}`}>
         <span className="sr-only">{review.title}</span>
       </Link>
 
-      <Thumb review={review} />
+      <div className="relative z-10">
+        {video ? (
+          <VideoPlayer
+            provider={video.provider}
+            url={video.url}
+            title={review.title}
+            poster={review.cover_image}
+            description={review.description}
+            trigger={<Thumb review={review} />}
+            triggerClassName="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#FF4B12]"
+          />
+        ) : (
+          <Link href={href} className="block" aria-label={`เปิดรายละเอียด: ${review.title}`}>
+            <Thumb review={review} />
+          </Link>
+        )}
+      </div>
 
-      <div className="flex flex-col gap-1.5 p-3">
+      <div className="pointer-events-none relative z-10 flex flex-col gap-1.5 p-3">
         {label && (
           <span className={`w-fit rounded-md px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide ${badgeClass}`}>
             {label}
           </span>
         )}
-        <h3 className="line-clamp-2 text-sm font-bold leading-snug text-neutral-900 dark:text-neutral-50">
-          {review.title}
-        </h3>
+        <h3 className="line-clamp-2 text-sm font-bold leading-snug text-neutral-900 dark:text-neutral-50">{review.title}</h3>
         {review.description && (
-          <p className="line-clamp-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-            {review.description}
-          </p>
+          <p className="line-clamp-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{review.description}</p>
         )}
 
         <div className="flex flex-wrap gap-1.5">
@@ -154,21 +158,21 @@ export default function ReviewCard({
             {review.created_at && <li>{formatThaiDate(review.created_at)}</li>}
           </ul>
         )}
+      </div>
 
-        <div className="relative z-10 mt-1 flex flex-wrap gap-2">
-          <ShareButton title={review.title} url={canonicalUrl} compact />
-          {mapsUrl && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#FF4B12] px-2.5 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-[#B62F08]"
-            >
-              <PinIcon className="h-3 w-3" color="text-white" />
-              Maps
-            </a>
-          )}
-        </div>
+      <div className="relative z-20 mt-1 flex flex-wrap gap-2 px-3 pb-3">
+        <ShareButton title={review.title} url={canonicalUrl} compact />
+        {mapsUrl && (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#FF4B12] px-2.5 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-[#B62F08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4B12] focus-visible:ring-offset-2"
+          >
+            <PinIcon className="h-3 w-3" color="text-white" />
+            Maps
+          </a>
+        )}
       </div>
     </div>
   );

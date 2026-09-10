@@ -399,6 +399,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
         <h2 className="text-lg font-extrabold">จัดการหมวดหมู่</h2>
         <p className="mt-1 text-sm text-neutral-500">เพิ่มและแก้ไขหมวดหมู่จากหน้าแยก โดยไม่กระทบหน้าเพิ่มเนื้อหา</p>
         <Link href="/admin/categories" className="mt-3 inline-block rounded-xl border border-[#DA3D0D] px-4 py-2 text-sm font-bold text-[#B62F08] hover:bg-[#FFF2ED]">ไปจัดการหมวดหมู่</Link>
+        <Link href="/admin/must-visit" className="ml-3 mt-3 inline-block rounded-xl bg-[#DA3D0D] px-4 py-2 text-sm font-bold text-white hover:bg-[#B62F08]">จัดการพิกัดต้องแวะ</Link>
       </section>
 
       <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">

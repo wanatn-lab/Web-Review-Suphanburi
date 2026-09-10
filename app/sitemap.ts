@@ -23,5 +23,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [{ url: SITE_URL, changeFrequency: "daily", priority: 1 }, ...categoryEntries, ...reviewEntries];
+  return [{ url: SITE_URL, changeFrequency: "daily", priority: 1 }, { url: `${SITE_URL}/must-visit-suphanburi`, changeFrequency: "weekly", priority: 0.9 }, ...categoryEntries, ...reviewEntries];
 }

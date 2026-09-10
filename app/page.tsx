@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllReviews } from "@/lib/supabase";
+import { getAllReviews, getMustVisitReviews } from "@/lib/supabase";
 import { getCategories } from "@/lib/categories";
 import ReviewCard from "@/components/review-card";
 import TrendingVideoCard from "@/components/trending-video-card";
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [reviews, categories] = await Promise.all([getAllReviews(12), getCategories()]);
+  const [reviews, categories, mustVisitReviews] = await Promise.all([getAllReviews(12), getCategories(), getMustVisitReviews(6)]);
   // เดโม: ใช้รีวิวล่าสุด 5 รายการแทน "กำลังมาแรง" ไปก่อน — ถ้าอยากจัดอันดับจริง
   // แนะนำเพิ่มคอลัมน์ view_count แล้วเปลี่ยน order() เป็น view_count desc
   const trending = reviews.slice(0, 5);
@@ -74,6 +74,26 @@ export default async function HomePage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="bg-[#FFF2ED] px-4 py-8 sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-extrabold tracking-wide text-[#B62F08]">LOCAL PICKS</span>
+              <h2 className="font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-[#7E260C]">มาสุพรรณบุรีต้องแวะ</h2>
+              <p className="mt-1 text-sm text-[#7E4A3B]">พิกัดคัดสรรสำหรับเริ่มวางแผนเที่ยว</p>
+            </div>
+            <Link href="/must-visit-suphanburi" className="shrink-0 text-sm font-bold text-[#B62F08] underline underline-offset-4 hover:text-[#7E260C]">ดูทั้งหมด</Link>
+          </div>
+          {mustVisitReviews.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {mustVisitReviews.map((review) => <ReviewCard key={review.id} review={review} />)}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-[#E5B8A7] bg-white/70 p-5 text-sm text-[#8A4A35]">กำลังคัดเลือกพิกัดที่ต้องแวะ</p>
+          )}
+        </div>
       </section>
 
       {trending.length > 0 && (

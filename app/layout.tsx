@@ -106,6 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               รีวิวสุพรรณบุรี
             </Link>
             <nav aria-label="เมนูหลัก" className="ml-auto hidden gap-6 text-sm font-medium sm:flex">
+              <Link href="/must-visit-suphanburi" className="font-bold text-[#FFDD00] transition hover:underline">ต้องแวะ</Link>
               {categories.map((c) => (
                 <Link
                   key={c.slug}
@@ -119,6 +120,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
           <nav aria-label="เมนูหมวดหมู่บนมือถือ" className="border-t border-white/15 sm:hidden">
             <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 py-2">
+              <Link href="/must-visit-suphanburi" className="inline-flex min-h-11 flex-none items-center whitespace-nowrap rounded-full bg-[#FFDD00] px-3 text-sm font-bold text-[#5A2600]">ต้องแวะ</Link>
               {categories.map((c) => (
                 <Link
                   key={c.slug}
@@ -150,6 +152,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 หมวดหมู่
               </h2>
               <ul className="mt-2 flex flex-col gap-2 text-sm">
+                <li><Link href="/must-visit-suphanburi" className="text-[#FBDDCD] hover:text-white">มาสุพรรณบุรีต้องแวะ</Link></li>
                 {categories.map((c) => (
                   <li key={c.slug}>
                     <Link href={`/category/${c.slug}`} className="text-[#FBDDCD] hover:text-white">

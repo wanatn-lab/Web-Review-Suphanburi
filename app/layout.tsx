@@ -117,6 +117,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               ))}
             </nav>
           </div>
+          <nav aria-label="เมนูหมวดหมู่บนมือถือ" className="border-t border-white/15 sm:hidden">
+            <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 py-2">
+              {categories.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/category/${c.slug}`}
+                  className="inline-flex min-h-11 flex-none items-center whitespace-nowrap rounded-full px-3 text-sm font-medium text-white/95 transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  {c.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
         </header>
 
         {children}

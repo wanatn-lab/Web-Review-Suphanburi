@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 // components/video-player.tsx
 // วิดีโอรีวิว "ช่องทางเดียว" (Facebook หรือ TikTok — เลือกโชว์แค่อันที่มีจริง
@@ -140,57 +141,59 @@ export function VideoPlayer({
         )}
       </button>
 
-      {open && (
-        // แตะพื้นหลังสีดำ (นอกตัววิดีโอ/คำอธิบาย) เพื่อปิดได้เลย — ตัววิดีโอกับ
-        // คำอธิบายกันคลิกไม่ให้ทะลุมาปิด (stopPropagation) ส่วนปุ่ม X ปิดตรงๆ
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`วิดีโอเต็มจอ: ${title}`}
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-[60] flex flex-col bg-black"
-        >
-          <div className="flex flex-shrink-0 items-center justify-end p-3">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="ปิดวิดีโอ"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex flex-1 flex-col overflow-y-auto overscroll-contain">
-            <div
-              className={`relative mx-auto w-full flex-shrink-0 bg-neutral-900 ${isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-md"}`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <iframe
-                ref={iframeRef}
-                src={embedSrc}
-                onLoad={handlePlayerLoad}
-                title={`วิดีโอรีวิวเต็มจอ: ${title}`}
-                className="absolute inset-0 h-full w-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+      {open && typeof document !== "undefined" &&
+        // Portal ไปที่ body โดยตรง: ไม่ติด stacking context ของการ์ด/ฟีด จึงทับ header
+        // และเนื้อหาด้านหลังได้เต็มจอจริงทุก breakpoint
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`วิดีโอเต็มจอ: ${title}`}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[100] flex min-h-dvh flex-col bg-black"
+          >
+            <div className="flex flex-shrink-0 items-center justify-end p-3">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="ปิดวิดีโอ"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
             </div>
 
-            {description && (
-              <p
-                className="mx-auto w-full max-w-md px-4 py-5 text-sm leading-[1.8] text-neutral-200"
+            <div className="flex flex-1 flex-col overflow-y-auto overscroll-contain">
+              <div
+                className={`relative mx-auto w-full flex-shrink-0 bg-neutral-900 ${isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-md"}`}
                 onClick={(event) => event.stopPropagation()}
               >
-                {description}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+                <iframe
+                  ref={iframeRef}
+                  src={embedSrc}
+                  onLoad={handlePlayerLoad}
+                  title={`วิดีโอรีวิวเต็มจอ: ${title}`}
+                  className="absolute inset-0 h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+
+              {description && (
+                <p
+                  className="mx-auto w-full max-w-md px-4 py-5 text-sm leading-[1.8] text-neutral-200"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {description}
+                </p>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

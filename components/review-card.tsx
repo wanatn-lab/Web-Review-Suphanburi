@@ -12,8 +12,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.c
 
 function PlayBadge() {
   return (
-    <div className="absolute right-2 top-2 z-[1] flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white">
-      <svg viewBox="0 0 24 24" className="h-3 w-3 translate-x-[1px]" fill="currentColor" stroke="none" aria-hidden="true">
+    <div className="absolute right-2 top-2 z-[1] flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white">
+      <svg viewBox="0 0 24 24" className="h-4 w-4 translate-x-[1px]" fill="currentColor" stroke="none" aria-hidden="true">
         <polygon points="8,5 19,12 8,19" />
       </svg>
     </div>
@@ -167,7 +167,7 @@ export default function ReviewCard({
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#FF4B12] px-2.5 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-[#B62F08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4B12] focus-visible:ring-offset-2"
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-[#FF4B12] px-3 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-[#B62F08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4B12] focus-visible:ring-offset-2"
           >
             <PinIcon className="h-3 w-3" color="text-white" />
             Maps

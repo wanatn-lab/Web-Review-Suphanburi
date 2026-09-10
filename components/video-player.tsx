@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 // components/video-player.tsx
 // วิดีโอรีวิว "ช่องทางเดียว" (Facebook หรือ TikTok — เลือกโชว์แค่อันที่มีจริง
@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 // ปิดได้ 3 ทาง: กดปุ่ม X, กดปุ่ม Escape, หรือคลิกพื้นหลังสีดำรอบวิดีโอ
 // ล็อกการเลื่อนหน้าเว็บด้านหลัง (body scroll) ไว้ตอนเปิดเต็มจอ
 
-type Provider = "facebook" | "tiktok" | "youtube";
+export type VideoProvider = "facebook" | "tiktok" | "youtube";
 
 function youtubeVideoId(value: string): string | null {
   try {
@@ -30,7 +30,7 @@ function youtubeVideoId(value: string): string | null {
   }
 }
 
-function buildEmbedSrc(provider: Provider, url: string): string | null {
+function buildEmbedSrc(provider: VideoProvider, url: string): string | null {
   if (provider === "facebook") {
     const encoded = encodeURIComponent(url);
     return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&autoplay=true`;
@@ -41,7 +41,7 @@ function buildEmbedSrc(provider: Provider, url: string): string | null {
   }
   // TikTok: ดึง video id จาก URL แล้วต่อเป็น embed v2 (ไม่ต้องโหลด widget.js ที่หนัก)
   const match = url.match(/video\/(\d+)/);
-  return match ? `https://www.tiktok.com/embed/v2/${match[1]}` : null;
+  return match ? `https://www.tiktok.com/embed/v2/${match[1]}?autoplay=1` : null;
 }
 
 function PlayGlyph({ className = "h-7 w-7 translate-x-[2px]" }: { className?: string }) {
@@ -58,12 +58,16 @@ export function VideoPlayer({
   title,
   poster,
   description,
+  trigger,
+  triggerClassName,
 }: {
-  provider: Provider;
+  provider: VideoProvider;
   url: string;
   title: string;
   poster: string | null;
   description: string | null;
+  trigger?: ReactNode;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const embedSrc = buildEmbedSrc(provider, url);
@@ -98,8 +102,10 @@ export function VideoPlayer({
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-label={`เล่นวิดีโอรีวิว: ${title}`}
-        className={`group relative mx-auto block w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ${playerSize}`}
+        className={triggerClassName ?? `group relative mx-auto block w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ${playerSize}`}
       >
+        {trigger ?? (
+          <>
         {poster ? (
           // ภาพปกจริงจาก TikTok/Facebook — ไม่ใช้ next/image เพราะเป็น URL ที่หมดอายุได้
           // eslint-disable-next-line @next/next/no-img-element
@@ -116,6 +122,8 @@ export function VideoPlayer({
             <PlayGlyph />
           </span>
         </div>
+          </>
+        )}
       </button>
 
       {open && (

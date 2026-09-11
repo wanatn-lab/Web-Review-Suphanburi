@@ -88,7 +88,7 @@ export default function ReviewCard({
     return (
       <Link
         href={href}
-        className={`group relative block overflow-hidden rounded-2xl shadow-md transition hover:shadow-lg ${className}`}
+        className={`group relative block overflow-hidden rounded-2xl shadow-md transition hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08] focus-visible:ring-offset-2 ${className}`}
       >
         <Thumb review={review} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex flex-col gap-1 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">

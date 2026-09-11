@@ -105,13 +105,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </svg>
               รีวิวสุพรรณบุรี
             </Link>
-            <nav aria-label="เมนูหลัก" className="ml-auto hidden gap-6 text-sm font-medium sm:flex">
-              <Link href="/must-visit-suphanburi" className="font-bold text-[#FFDD00] transition hover:underline">ต้องแวะ</Link>
+            <nav aria-label="เมนูหลัก" className="ml-auto hidden items-center gap-3 text-sm font-medium sm:flex lg:gap-5">
+              <Link href="/must-visit-suphanburi" className="inline-flex min-h-11 items-center rounded-full bg-[#FFDD00] px-3 font-bold text-[#5A2600] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">ต้องแวะ</Link>
               {categories.map((c) => (
                 <Link
                   key={c.slug}
                   href={`/category/${c.slug}`}
-                  className="opacity-90 transition hover:opacity-100 hover:underline"
+                  className="inline-flex min-h-11 items-center opacity-90 transition hover:opacity-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   {c.label}
                 </Link>

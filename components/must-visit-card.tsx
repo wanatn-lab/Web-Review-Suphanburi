@@ -107,7 +107,7 @@ function MapsLink({ review, compact = false }: { review: Review; compact?: boole
       }`}
     >
       <PinIcon className="h-4 w-4" color={compact ? "text-[#B62F08]" : "text-white"} />
-      {compact ? "แผนที่" : "เปิดพิกัด"}
+      เปิดพิกัด
     </a>
   );
 }
@@ -142,9 +142,9 @@ export function MustVisitSpotlight({ review }: { review: Review }) {
   );
 }
 
-export function MustVisitCard({ review, rank }: { review: Review; rank: number }) {
+export function MustVisitCard({ review, rank, className = "" }: { review: Review; rank: number; className?: string }) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-[#F0D7CD] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+    <article className={`overflow-hidden rounded-2xl border border-[#F0D7CD] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${className}`}>
       <div className="relative">
         <ReviewMedia review={review} className="aspect-[4/5]" />
         <span className="absolute left-3 top-3 rounded-full bg-[#2D160E]/90 px-2.5 py-1 text-xs font-extrabold text-white">#{String(rank).padStart(2, "0")}</span>
@@ -152,12 +152,6 @@ export function MustVisitCard({ review, rank }: { review: Review; rank: number }
       <div className="p-4">
         <CategoryBadge review={review} />
         <h3 className="mt-3 line-clamp-2 font-[family-name:var(--font-kanit)] text-lg font-extrabold leading-snug text-[#3B1C12]">{review.title}</h3>
-        {review.location_text && (
-          <p className="mt-2 flex min-h-10 items-start gap-1.5 text-xs leading-5 text-[#7E4A3B]">
-            <PinIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" color="text-[#B62F08]" />
-            <span className="line-clamp-2">{review.location_text}</span>
-          </p>
-        )}
         <div className="mt-4 flex gap-2">
           <Link href={`/reviews/${review.slug}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[#DA3D0D] px-3 text-sm font-extrabold text-white transition hover:bg-[#B62F08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08] focus-visible:ring-offset-2">ดูรีวิว</Link>
           <MapsLink review={review} compact />

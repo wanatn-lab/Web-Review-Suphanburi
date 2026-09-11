@@ -52,6 +52,7 @@ interface ReviewInsertRow {
   title: string;
   slug: string;
   description: string;
+  caption: string;
   category: string;
   cover_image: string | null;
   facebook_embed_url: string;
@@ -154,6 +155,9 @@ export async function GET(request: Request) {
         title: seo.title,
         slug: buildSlugFromPostId(video.id),
         description: seo.description,
+        // Keep the source caption so an editor can regenerate richer SEO
+        // copy later without having to find the original post again.
+        caption,
         category: categorySlug,
         cover_image: video.picture,
         facebook_embed_url: video.permalink_url,

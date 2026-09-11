@@ -258,6 +258,40 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
         </>
       )}
 
+      {isEditing && (
+        <section className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5 dark:border-orange-900/50 dark:bg-orange-950/20">
+          <h2 className="text-base font-extrabold">เพิ่มข้อความ SEO จากวิดีโอต้นทาง</h2>
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+            วางลิงก์ Facebook ของรายการนี้เพื่อดึงแคปชั่นและถอดเสียงคลิปมาเติมช่องเนื้อหาด้านล่าง คุณตรวจแก้ก่อนกดบันทึกได้เสมอ
+          </p>
+          <form action={importAction} className="mt-3">
+            <label htmlFor="facebook_url" className="text-sm font-semibold">ลิงก์ Facebook</label>
+            <input
+              id="facebook_url"
+              name="facebook_url"
+              type="url"
+              inputMode="url"
+              required
+              maxLength={2000}
+              defaultValue={values.referenceUrl.includes("facebook.com") ? values.referenceUrl : ""}
+              placeholder="https://www.facebook.com/reel/..."
+              className={inputClass}
+            />
+            <ImportSubmitButton />
+          </form>
+          {importState.status === "error" && (
+            <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+              {importState.message}
+            </p>
+          )}
+          {importState.status === "success" && (
+            <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950/30 dark:text-green-100">
+              {importState.draft.notice}
+            </p>
+          )}
+        </section>
+      )}
+
       <form
         action={isEditing ? updateManualReview : createManualReview}
         className="mt-6 space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"

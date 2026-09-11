@@ -9,6 +9,7 @@ import {
   HOME_MUST_VISIT_LIMIT,
 } from "@/lib/must-visit";
 import ReviewCard from "@/components/review-card";
+import { MustVisitCard } from "@/components/must-visit-card";
 import TrendingVideoCard from "@/components/trending-video-card";
 
 // app/page.tsx — Home Page (Server Component, SSR)
@@ -97,8 +98,8 @@ export default async function HomePage() {
           </div>
           {mustVisitReviews.length > 0 ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
-              {mustVisitReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} variant="rail" className="w-44 flex-none snap-start sm:w-52" />
+              {mustVisitReviews.map((review, index) => (
+                <MustVisitCard key={review.id} review={review} rank={index + 1} className="w-44 flex-none snap-start sm:w-52" />
               ))}
             </div>
           ) : (

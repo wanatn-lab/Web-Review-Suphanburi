@@ -124,14 +124,13 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           ? review.youtube_embed_url
           : null;
 
-  // Ignore a saved embed URL unless its coordinates have passed the provincial
-  // guardrail. This prevents an old wrong pin from appearing in Geo schema.
-  const mapSrc = hasGeo
-    ? `https://www.google.com/maps?q=${review.latitude},${review.longitude}&z=16&output=embed`
-    : null;
+  // Use a direct Maps link instead of an embedded map. It gives the reader a
+  // clear next action and avoids repeating a long address inside the article.
   const directionsUrl = hasGeo
     ? `https://maps.google.com/?q=${review.latitude},${review.longitude}`
-    : null;
+    : review.location_text
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
+      : null;
 
   // ---- JSON-LD: LocalBusiness สำหรับ Geo-SEO เจาะจงพื้นที่สุพรรณบุรี ----
   const jsonLd: Record<string, unknown> = {
@@ -202,9 +201,16 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           )}
 
           <header className="flex flex-col items-center gap-3 pb-5 text-center">
-            <span className="inline-block rounded-md bg-[#FFE3D6] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[#B62F08]">
-              {review.category ? `${review.category_label ?? defaultCategoryLabel(review.category)}สุพรรณบุรี` : "รีวิวสุพรรณบุรี"}
-            </span>
+            <div className="flex flex-wrap justify-center gap-2">
+              <span className="inline-block rounded-md bg-[#FFE3D6] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[#B62F08]">
+                {review.category ? `${review.category_label ?? defaultCategoryLabel(review.category)}สุพรรณบุรี` : "รีวิวสุพรรณบุรี"}
+              </span>
+              {review.is_must_visit && (
+                <span className="inline-block rounded-md bg-[#FFDD00] px-2.5 py-1 text-xs font-extrabold tracking-wide text-[#5A2600]">
+                  ร้านต้องแวะ · มาสุพรรณต้องกิน
+                </span>
+              )}
+            </div>
             <h1 className="max-w-[26ch] text-2xl font-extrabold leading-snug text-neutral-900 dark:text-neutral-50 sm:text-3xl">
               {review.title}
             </h1>
@@ -218,24 +224,14 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           </header>
 
           {review.description && (
-            <p className="pb-6 text-[0.95rem] leading-[1.8] text-neutral-600 dark:text-neutral-300">
-              {review.description}
-            </p>
-          )}
-
-          {/* Geo-location signal: Google Maps embed, lazy-loaded */}
-          {mapSrc && (
-            <div className="pb-6">
-              <div className="aspect-video overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
-                <iframe
-                  src={mapSrc}
-                  title={`แผนที่ ${review.title}`}
-                  loading="lazy"
-                  className="h-full w-full border-0"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
-            </div>
+            <section className="pb-6" aria-labelledby="video-summary-heading">
+              <h2 id="video-summary-heading" className="mb-2 text-base font-extrabold text-neutral-900 dark:text-neutral-50">
+                สรุปจากวิดีโอรีวิว
+              </h2>
+              <p className="text-[0.95rem] leading-[1.8] text-neutral-600 dark:text-neutral-300">
+                {review.description}
+              </p>
+            </section>
           )}
 
           {directionsUrl && (
@@ -246,7 +242,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
               className="flex items-center justify-center gap-2 rounded-xl bg-[#FF4B12] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]"
             >
               <PinIcon />
-              นำทางไปที่นี่ (Google Maps)
+              เปิดพิกัดใน Google Maps
             </a>
           )}
         </article>

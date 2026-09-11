@@ -74,7 +74,7 @@ export default async function MustVisitSuphanburiPage() {
                 <p className="text-xs font-extrabold tracking-wide text-[#B62F08]">เริ่มทริปจากพิกัดนี้</p>
                 <h2 className="mt-1 font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-[#3B1C12]">พิกัดเด่นที่ต้องแวะ</h2>
               </div>
-              <span className="text-sm text-[#7E4A3B]">ดูวิดีโอ · อ่านรีวิว · เปิดแผนที่</span>
+              <span className="text-sm text-[#7E4A3B]">ดูวิดีโอ · อ่านรีวิว · เปิดพิกัด</span>
             </div>
             <MustVisitSpotlight review={spotlight} />
 

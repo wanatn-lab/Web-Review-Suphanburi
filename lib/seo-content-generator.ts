@@ -74,7 +74,7 @@ function buildPrompt({ categoryLabel, placeName, caption, transcript }: SeoCopyI
     "",
     'ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่นก่อนหรือหลัง รูปแบบ: {"title": "...", "description": "..."}',
     "- title: ไม่เกิน 60 ตัวอักษร มีชื่อสถานที่ และคำว่า \"สุพรรณบุรี\"",
-    "- description: 2-4 ประโยค ยาว 150-300 ตัวอักษร อ่านลื่นเหมือนคนเขียนจริง ไม่ยัดคีย์เวิร์ดซ้ำๆ",
+    "- description: 3-5 ประโยค ยาวประมาณ 350-600 ตัวอักษร สรุปจุดเด่นจากแคปชั่นและเสียงพากย์ให้อ่านลื่นเหมือนคนเขียนจริง ไม่ยัดคีย์เวิร์ดซ้ำๆ",
   ].join("\n");
 }
 
@@ -162,7 +162,7 @@ export async function generateSeoCopy(input: SeoCopyInput): Promise<GeneratedSeo
           },
           { role: "user", content: buildPrompt(input) },
         ],
-        max_tokens: 400,
+        max_tokens: 700,
         temperature: 0.4,
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

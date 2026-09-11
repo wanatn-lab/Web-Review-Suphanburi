@@ -67,7 +67,7 @@ function ReviewMedia({ review, className, priority = false }: { review: Review; 
       <span className="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[#B62F08] shadow-lg">
         {source ? <PlayIcon /> : <ArrowIcon />}
       </span>
-      <span className="absolute bottom-3 left-3 text-xs font-bold text-white/95">{source ? "แตะเพื่อดูวิดีโอ" : "เปิดรายละเอียด"}</span>
+      <span className="absolute bottom-3 left-3 text-xs font-bold text-white/95">{source ? "แตะเพื่อเล่นวิดีโอ" : "เปิดรายละเอียด"}</span>
     </div>
   );
 
@@ -107,7 +107,7 @@ function MapsLink({ review, compact = false }: { review: Review; compact?: boole
       }`}
     >
       <PinIcon className="h-4 w-4" color={compact ? "text-[#B62F08]" : "text-white"} />
-      แผนที่
+      {compact ? "แผนที่" : "เปิดพิกัด"}
     </a>
   );
 }
@@ -126,13 +126,7 @@ export function MustVisitSpotlight({ review }: { review: Review }) {
           <h2 className="mt-5 font-[family-name:var(--font-kanit)] text-3xl font-extrabold leading-tight sm:text-4xl">
             {review.title}
           </h2>
-          {review.description && <p className="mt-4 line-clamp-4 text-sm leading-7 text-[#F5D9CC] sm:text-base">{review.description}</p>}
-          {review.location_text && (
-            <p className="mt-5 flex items-start gap-2 text-sm leading-6 text-white/85">
-              <PinIcon className="mt-1 h-4 w-4 shrink-0" color="text-[#FFDD00]" />
-              <span>{review.location_text}</span>
-            </p>
-          )}
+          {review.description && <p className="mt-4 line-clamp-3 text-sm font-medium leading-7 text-white sm:text-base">{review.description}</p>}
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
               href={`/reviews/${review.slug}`}

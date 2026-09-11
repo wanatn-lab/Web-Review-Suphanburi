@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
-  buildSeoDescription,
   buildSlugFromPostId,
   buildTitleFromCaption,
   fetchPageVideos,
@@ -10,6 +9,7 @@ import {
 import { geocodeFromCaption, isGeocodingEnabled } from "@/lib/geocoding";
 import { isCronAuthorized } from "@/lib/cron-auth";
 import { getActiveToken } from "@/lib/facebook-token";
+import { createEnhancedSeoContent, type ManualSeoCategory } from "@/lib/manual-content";
 
 // app/api/sync-facebook/route.ts
 // Route Handler that pulls the latest video clips from the "reviewsuphanburi"
@@ -31,6 +31,17 @@ export const dynamic = "force-dynamic"; // never cache this route's response
 
 /** delay between each Geocoding call -- avoids hitting Google Maps API rate limits */
 const GEOCODE_DELAY_MS = 200;
+
+// Used only if the categories table cannot be read during a scheduled run.
+// The fallback keeps a new Facebook post publishable without inventing a
+// category label, while normal runs use the label the editor manages in admin.
+const DEFAULT_CATEGORY_LABELS: Record<string, string> = {
+  food: "ร้านอาหาร",
+  cafe: "คาเฟ่",
+  trip: "ที่เที่ยว",
+  stay: "ที่พัก",
+  market: "ตลาด",
+};
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -114,15 +125,36 @@ export async function GET(request: Request) {
       });
     }
 
-    // 3) Map to reviews table rows, guessing category + writing an
-    // auto-generated SEO description along the way
-    const rows: ReviewInsertRow[] = newVideos.map((video) => {
+    // 3) Build a longer SEO description from the actual caption for every
+    // newly imported clip. This follows the same AI-with-safe-fallback path
+    // as the YouTube importer. Existing rows are intentionally untouched, so
+    // an editor's corrections can never be overwritten by a cron run.
+    const { data: activeCategories, error: categoriesError } = await supabaseAdmin
+      .from("categories")
+      .select("slug, label")
+      .eq("is_active", true);
+    if (categoriesError) {
+      console.error("[sync-facebook] Failed to load active category labels:", categoriesError.message);
+    }
+    const categoryBySlug = new Map((activeCategories ?? []).map((category) => [category.slug, category as ManualSeoCategory]));
+
+    const rows: ReviewInsertRow[] = await Promise.all(newVideos.map(async (video) => {
       const caption = video.description ?? "";
+      const categorySlug = guessCategory(caption);
+      const category = categoryBySlug.get(categorySlug) ?? {
+        slug: categorySlug,
+        label: DEFAULT_CATEGORY_LABELS[categorySlug] ?? "สถานที่น่าสนใจ",
+      };
+      const seo = await createEnhancedSeoContent(
+        category,
+        buildTitleFromCaption(video.description, video.id),
+        caption
+      );
       return {
-        title: buildTitleFromCaption(video.description, video.id),
+        title: seo.title,
         slug: buildSlugFromPostId(video.id),
-        description: buildSeoDescription(video.description),
-        category: guessCategory(caption),
+        description: seo.description,
+        category: categorySlug,
         cover_image: video.picture,
         facebook_embed_url: video.permalink_url,
         tiktok_embed_url: null,
@@ -133,7 +165,7 @@ export async function GET(request: Request) {
         facebook_post_id: video.id,
         created_at: video.created_time,
       };
-    });
+    }));
 
     // 4) Fill in coordinates automatically from the caption (Geocoding) --
     // strictly best effort. If GEOCODING_API_KEY isn't set, skip this whole

@@ -32,12 +32,20 @@ test("generateSeoCopy returns null when there is no caption or transcript", asyn
 
 test("generateSeoCopy parses a clean JSON reply", async () => {
   const modelReply = JSON.stringify({ title: "ร้านทดสอบ สุพรรณบุรี", description: "คำโปรยตัวอย่างที่เขียนโดยโมเดล" });
-  const result = await withFetchResponse(
-    { success: true, result: { response: modelReply } },
-    200,
-    () => generateSeoCopy(baseInput)
-  );
-  assert.deepEqual(result, { title: "ร้านทดสอบ สุพรรณบุรี", description: "คำโปรยตัวอย่างที่เขียนโดยโมเดล" });
+  let requestBody = "";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    requestBody = String(init?.body ?? "");
+    return new Response(JSON.stringify({ success: true, result: { response: modelReply } }), { status: 200 });
+  };
+  try {
+    const result = await generateSeoCopy(baseInput);
+    assert.deepEqual(result, { title: "ร้านทดสอบ สุพรรณบุรี", description: "คำโปรยตัวอย่างที่เขียนโดยโมเดล" });
+    assert.match(requestBody, /350-600 ตัวอักษร/);
+    assert.match(requestBody, /ใช้เฉพาะข้อมูลที่มีอยู่จริง/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("generateSeoCopy extracts JSON even when the model wraps it in extra text", async () => {

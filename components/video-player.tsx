@@ -61,6 +61,7 @@ export function VideoPlayer({
   title,
   poster,
   description,
+  mapsUrl,
   trigger,
   triggerClassName,
 }: {
@@ -69,6 +70,8 @@ export function VideoPlayer({
   title: string;
   poster: string | null;
   description: string | null;
+  /** Direct Google Maps URL for this review, when a verified pin is available. */
+  mapsUrl?: string | null;
   trigger?: ReactNode;
   triggerClassName?: string;
 }) {
@@ -189,6 +192,22 @@ export function VideoPlayer({
                 >
                   {description}
                 </p>
+              )}
+
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="mx-auto mb-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF4B12] px-4 text-sm font-extrabold text-white transition hover:bg-[#B62F08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                    <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+                    <circle cx="12" cy="10" r="2.4" />
+                  </svg>
+                  เปิดพิกัดร้าน
+                </a>
               )}
             </div>
           </div>,

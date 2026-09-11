@@ -75,6 +75,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           title={review.title}
           poster={review.cover_image}
           description={review.description}
+          mapsUrl={mapsUrl}
           trigger={cover}
           triggerClassName="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#FFDD00]"
         />

@@ -81,7 +81,11 @@ export default function ReviewCard({
   const href = `/reviews/${review.slug}`;
   const canonicalUrl = `${SITE_URL}${href}`;
   const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
-  const mapsUrl = hasGeo ? `https://maps.google.com/?q=${review.latitude},${review.longitude}` : null;
+  const mapsUrl = hasGeo
+    ? `https://maps.google.com/?q=${review.latitude},${review.longitude}`
+    : review.location_text
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
+      : null;
   const video = videoSource(review);
 
   if (variant === "rail") {
@@ -123,6 +127,7 @@ export default function ReviewCard({
             title={review.title}
             poster={review.cover_image}
             description={review.description}
+            mapsUrl={mapsUrl}
             trigger={<Thumb review={review} />}
             triggerClassName="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#FF4B12]"
           />

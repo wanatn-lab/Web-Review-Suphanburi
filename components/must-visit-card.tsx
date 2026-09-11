@@ -79,6 +79,7 @@ function ReviewMedia({ review, className, priority = false }: { review: Review; 
         title={review.title}
         poster={review.cover_image}
         description={review.description}
+        mapsUrl={getMapsUrl(review)}
         trigger={media}
         triggerClassName="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFDD00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#2D160E]"
       />

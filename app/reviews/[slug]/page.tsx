@@ -196,6 +196,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
                 title={review.title}
                 poster={review.cover_image}
                 description={review.description}
+                mapsUrl={directionsUrl}
               />
             </div>
           )}

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { youtubeThumbnailCandidates } from "../lib/youtube-thumbnails.js";
 import { buildSlugFromYouTubeVideoId, durationToSeconds, fetchChannelVideos } from "../lib/youtube-sync.js";
 
 test("fetchChannelVideos reads the uploads playlist and maps public videos", async () => {
@@ -34,7 +35,7 @@ test("fetchChannelVideos reads the uploads playlist and maps public videos", asy
       description: "คลิปรีวิวล่าสุด",
       permalinkUrl: "https://www.youtube.com/watch?v=abc123_DEF-",
       publishedAt: "2026-09-01T12:00:00Z",
-      thumbnailUrl: "https://i.ytimg.com/vi/abc123_DEF-/hqdefault.jpg",
+      thumbnailUrl: "https://i.ytimg.com/vi/abc123_DEF-/maxresdefault.jpg",
       durationSeconds: 59,
     }]);
     const channelUrl = new URL(requested[0]);
@@ -113,4 +114,15 @@ test("durationToSeconds parses ISO 8601 durations", () => {
   assert.equal(durationToSeconds("PT1H2M3S"), 3723);
   assert.equal(durationToSeconds("PT0S"), 0);
   assert.equal(durationToSeconds("not-a-duration"), null);
+});
+
+test("youtubeThumbnailCandidates returns high-resolution fallbacks", () => {
+  assert.deepEqual(youtubeThumbnailCandidates("abc123_DEF-"), [
+    "https://i.ytimg.com/vi/abc123_DEF-/maxresdefault.jpg",
+    "https://i.ytimg.com/vi/abc123_DEF-/sddefault.jpg",
+    "https://i.ytimg.com/vi/abc123_DEF-/hqdefault.jpg",
+    "https://i.ytimg.com/vi/abc123_DEF-/mqdefault.jpg",
+    "https://i.ytimg.com/vi/abc123_DEF-/default.jpg",
+  ]);
+  assert.deepEqual(youtubeThumbnailCandidates("invalid"), []);
 });

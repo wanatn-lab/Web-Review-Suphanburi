@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
+import { youtubeThumbnailCandidates } from "@/lib/youtube-thumbnails";
 import PinIcon from "@/components/pin-icon";
 import ShareButton from "@/components/share-button";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
@@ -42,10 +44,42 @@ function videoSource(review: Review): { provider: VideoProvider; url: string } |
   return null;
 }
 
+function YouTubeThumb({ review }: { review: Review }) {
+  const candidates = Array.from(new Set([
+    ...youtubeThumbnailCandidates(review.youtube_video_id ?? ""),
+    review.cover_image,
+  ].filter((source): source is string => Boolean(source))));
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = candidates[sourceIndex];
+
+  if (!source) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-[#FF4B12]">
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" stroke="none" aria-hidden="true">
+          <polygon points="8,5 19,12 8,19" />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={source}
+      alt={review.title}
+      fill
+      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+      className="object-cover transition duration-300 group-hover:scale-105"
+      onError={() => setSourceIndex((current) => Math.min(current + 1, candidates.length))}
+    />
+  );
+}
+
 function Thumb({ review }: { review: Review }) {
   return (
     <div className="relative aspect-[9/16] w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-      {review.cover_image ? (
+      {review.youtube_video_id ? (
+        <YouTubeThumb review={review} />
+      ) : review.cover_image ? (
         <Image
           src={review.cover_image}
           alt={review.title}

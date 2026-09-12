@@ -54,7 +54,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           src={review.cover_image}
           alt={review.title}
           fill
-          sizes="(min-width: 640px) 11rem, 9rem"
+          sizes="(min-width: 1024px) 14rem, (min-width: 640px) 30vw, 9rem"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
       ) : (

@@ -109,34 +109,47 @@ export default async function HomePage() {
       </section>
 
       {featuredReviews.length > 0 && (
-        <section className="px-4 py-8 sm:px-8">
-          <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">วิดีโอแนะนำ</h2>
-          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
-            {featuredReviews.map((review) => (
-              <TrendingVideoCard key={review.id} review={review} className="w-36 flex-none snap-start sm:w-44" />
-            ))}
+        <section className="bg-[#FFF8F5] px-4 py-10 sm:px-8 sm:py-12">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <span className="text-xs font-extrabold tracking-[0.12em] text-[#B62F08]">WATCH &amp; GO</span>
+                <h2 className="font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900 sm:text-3xl">วิดีโอแนะนำ</h2>
+                <p className="mt-1 text-sm text-neutral-600">คลิปคัดมาให้ดูง่าย พร้อมเปิดพิกัดร้านและที่เที่ยวได้ทันที</p>
+              </div>
+              <a href="#latest-videos" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold text-[#B62F08] underline underline-offset-4 transition hover:bg-white hover:text-[#7E260C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08]">
+                ดูวิดีโอล่าสุด
+              </a>
+            </div>
+            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible lg:grid-cols-5">
+              {featuredReviews.map((review) => (
+                <TrendingVideoCard key={review.id} review={review} className="w-36 flex-none snap-start sm:w-auto sm:flex-none" />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      <section className="px-4 py-8 sm:px-8">
-        <h2 className="mb-4 font-[family-name:var(--font-kanit)] text-lg font-bold">ฟีดวิดีโอรีวิวล่าสุด</h2>
-        {latestReviews.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {latestReviews.map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))}
-          </div>
-        ) : reviews.length > 0 ? (
-          <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
-            รีวิวล่าสุดทั้งหมดแสดงอยู่ในส่วนแนะนำด้านบนแล้ว
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
-            ยังไม่มีรีวิวในระบบ — เพิ่มข้อมูลในตาราง{" "}
-            <code className="rounded bg-neutral-200 px-1 py-0.5 dark:bg-neutral-800">reviews</code> ของ Supabase ได้เลย
-          </div>
-        )}
+      <section id="latest-videos" className="px-4 py-10 sm:px-8 sm:py-12">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="mb-5 font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900">ฟีดวิดีโอรีวิวล่าสุด</h2>
+          {latestReviews.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {latestReviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
+              รีวิวล่าสุดทั้งหมดแสดงอยู่ในส่วนแนะนำด้านบนแล้ว
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
+              ยังไม่มีรีวิวในระบบ — เพิ่มข้อมูลในตาราง{" "}
+              <code className="rounded bg-neutral-200 px-1 py-0.5 dark:bg-neutral-800">reviews</code> ของ Supabase ได้เลย
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );

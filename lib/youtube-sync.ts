@@ -1,7 +1,5 @@
 import "server-only";
 
-import { youtubeThumbnailCandidates } from "@/lib/youtube-thumbnails";
-
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 const MAX_RESULTS = 50;
 
@@ -60,14 +58,11 @@ function errorMessage(payload: YouTubeApiError | null, fallback: string): string
   return payload?.error?.message?.trim() || fallback;
 }
 
-function thumbnailUrl(videoId: string, thumbnails: YouTubeThumbnails | undefined): string | null {
-  const apiThumbnail = thumbnails?.maxres?.url;
-  if (apiThumbnail) return apiThumbnail;
-
-  // maxresdefault is usually 1280px wide and is available even when the API
-  // only reports a smaller `high`/`standard` thumbnail. The UI retries the
-  // API-style fallbacks for videos that do not expose a max-resolution file.
-  return youtubeThumbnailCandidates(videoId)[0]
+function thumbnailUrl(thumbnails: YouTubeThumbnails | undefined): string | null {
+  // Trust the URLs returned by the Data API. Guessing maxresdefault for a
+  // video without a real max-resolution thumbnail can return a tiny fallback
+  // image, which becomes visibly blurry when the admin card crops it.
+  return thumbnails?.maxres?.url
     ?? thumbnails?.standard?.url
     ?? thumbnails?.high?.url
     ?? thumbnails?.medium?.url
@@ -147,7 +142,7 @@ export async function fetchChannelVideos(channelId: string, apiKey: string, limi
       description: item.snippet?.description?.trim() || null,
       permalinkUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`,
       publishedAt: item.contentDetails?.videoPublishedAt ?? item.snippet?.publishedAt ?? new Date().toISOString(),
-      thumbnailUrl: thumbnailUrl(id, item.snippet?.thumbnails),
+      thumbnailUrl: thumbnailUrl(item.snippet?.thumbnails),
     }];
   });
 

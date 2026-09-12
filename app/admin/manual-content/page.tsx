@@ -367,7 +367,7 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
                       alt=""
                       width={64}
                       height={96}
-                      className="h-24 w-16 rounded-lg object-cover"
+                      className="h-24 w-16 rounded-lg bg-neutral-100 object-contain dark:bg-neutral-800"
                     />
                   )}
                   <div className="min-w-0 flex-1">

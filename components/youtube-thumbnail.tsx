@@ -23,9 +23,15 @@ export function YouTubeThumbnail({
   width?: number;
   height?: number;
 }) {
+  const [maxresCandidate, ...knownFallbackCandidates] = youtubeThumbnailCandidates(videoId);
+  // A stored maxresdefault URL may be the small placeholder described above.
+  // Try reliable standard YouTube endpoints first, then the stored URL, and
+  // only use maxresdefault as the final fallback.
   const candidates = Array.from(new Set([
-    ...youtubeThumbnailCandidates(videoId),
+    ...(fallbackSrc && fallbackSrc !== maxresCandidate && !fallbackSrc.endsWith("/maxresdefault.jpg") ? [fallbackSrc] : []),
+    ...knownFallbackCandidates,
     fallbackSrc,
+    maxresCandidate,
   ].filter((source): source is string => Boolean(source))));
   const [sourceIndex, setSourceIndex] = useState(0);
   const source = candidates[sourceIndex];

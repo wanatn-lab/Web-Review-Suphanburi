@@ -35,7 +35,7 @@ test("fetchChannelVideos reads the uploads playlist and maps public videos", asy
       description: "คลิปรีวิวล่าสุด",
       permalinkUrl: "https://www.youtube.com/watch?v=abc123_DEF-",
       publishedAt: "2026-09-01T12:00:00Z",
-      thumbnailUrl: "https://i.ytimg.com/vi/abc123_DEF-/maxresdefault.jpg",
+      thumbnailUrl: "https://i.ytimg.com/vi/abc123_DEF-/hqdefault.jpg",
       durationSeconds: 59,
     }]);
     const channelUrl = new URL(requested[0]);

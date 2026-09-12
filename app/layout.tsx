@@ -166,7 +166,48 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <h2 className="font-[family-name:var(--font-kanit)] text-sm font-bold uppercase tracking-wide text-[#FFD9C2]">
                 ติดต่อเรา
               </h2>
-              <p className="mt-2 text-sm text-[#FBDDCD]">อีเมล: hello@reviewsuphan.com</p>
+              <ul className="mt-3 flex flex-col gap-3 text-sm">
+                <li>
+                  <a
+                    href="https://www.facebook.com/Reviewsuphan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-2 text-[#FBDDCD] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    aria-label="ติดตามรีวิวสุพรรณบุรีบน Facebook"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                      <path d="M13.5 21v-8h2.75l.4-3h-3.15V8.08c0-.87.24-1.46 1.5-1.46h1.75V3.94c-.3-.04-1.32-.14-2.5-.14-2.48 0-4.18 1.51-4.18 4.29V10H7.25v3h2.82v8h3.43Z" />
+                    </svg>
+                    Facebook
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://www.tiktok.com/@reviewsuphan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-2 text-[#FBDDCD] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    aria-label="ติดตามรีวิวสุพรรณบุรีบน TikTok"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                      <path d="M15.5 3c.25 2.1 1.43 3.32 3.5 3.45v3.1a8.2 8.2 0 0 1-3.48-1.03v6.32a5.16 5.16 0 1 1-4.46-5.11v3.22a2.1 2.1 0 1 0 1.36 1.96V3h3.08Z" />
+                    </svg>
+                    TikTok
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="tel:0855298799"
+                    className="inline-flex min-h-11 items-center gap-2 text-[#FBDDCD] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    aria-label="โทรติดต่อรีวิวสุพรรณบุรี 085-529-8799"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 4.5 8 3.75l2 4.75-1.75 1.25a13.4 13.4 0 0 0 6 6L15.5 14l4.75 2-.75 2.5c-.3 1-1.25 1.6-2.28 1.42C10.12 18.57 5.43 13.88 4.08 6.78 3.9 5.75 4.5 4.8 5.5 4.5Z" />
+                    </svg>
+                    085-529-8799
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
           <div className="border-t border-white/15 px-4 py-4 text-center text-xs text-[#F0C1A8] sm:px-8">

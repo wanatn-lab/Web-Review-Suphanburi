@@ -55,6 +55,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           videoId={review.youtube_video_id}
           alt={review.title}
           fill
+          unoptimized
           sizes="(min-width: 1024px) 14rem, (min-width: 640px) 30vw, 9rem"
           className="object-cover transition duration-300 group-hover:scale-105"
         />

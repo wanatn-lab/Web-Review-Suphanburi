@@ -20,6 +20,23 @@ import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 
+function seoKeywordSuffix(category: string | null): string {
+  const suffixByCategory: Record<string, string> = {
+    food: "ร้านอาหารสุพรรณบุรี",
+    cafe: "คาเฟ่สุพรรณบุรี",
+    trip: "ที่เที่ยวสุพรรณบุรี",
+    stay: "ที่พักสุพรรณบุรี",
+    market: "ตลาดสุพรรณบุรี",
+    temple: "วัดสุพรรณบุรี",
+    "street-food": "สตรีทฟู้ดสุพรรณบุรี",
+    education: "โรงเรียนสุพรรณบุรี",
+    property: "บ้านสุพรรณบุรี",
+    event: "งานประจำจังหวัดสุพรรณบุรี",
+  };
+
+  return (category && suffixByCategory[category]) ?? "รีวิวสุพรรณบุรี";
+}
+
 // SEO fix (Sep 2026): app/layout.tsx already defines `title.template =
 // "%s | รีวิวสุพรรณบุรี"`, which Next.js applies automatically to every
 // page's `metadata.title`. This file used to build `title` as
@@ -60,7 +77,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           review.description ?? `รีวิว ${review.title} อัปเดตล่าสุด พร้อมพิกัดและวิดีโอรีวิวจริงจากสุพรรณบุรี`;
     const description = buildMetaDescription(
           rawDescription,
-          "ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี",
+          seoKeywordSuffix(review.category),
           MAX_META_DESCRIPTION_LENGTH
         );
     // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี" once.
@@ -132,28 +149,64 @@ export default async function ReviewDetailPage({ params }: PageProps) {
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
       : null;
 
-  // ---- JSON-LD: LocalBusiness สำหรับ Geo-SEO เจาะจงพื้นที่สุพรรณบุรี ----
-  const jsonLd: Record<string, unknown> = {
+  // Use the most specific place type the visible category supports.  A temple,
+  // market, or attraction is not a LocalBusiness, and misleading markup is
+  // less useful to Google than a smaller but accurate entity description.
+  const placeType =
+    review.category === "food"
+      ? "Restaurant"
+      : review.category === "cafe"
+        ? "CafeOrCoffeeShop"
+        : review.category === "stay"
+          ? "LodgingBusiness"
+          : review.category === "market"
+            ? "ShoppingCenter"
+            : review.category === "trip"
+              ? "TouristAttraction"
+              : review.category === "temple"
+                ? "PlaceOfWorship"
+                : "Place";
+  const placeId = `${canonicalUrl}#place`;
+  const placeSchema: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@id": placeId,
+    "@type": placeType,
     name: review.title,
     description: review.description ?? `รีวิว ${review.title} จังหวัดสุพรรณบุรี`,
     url: canonicalUrl,
     image: review.cover_image ?? undefined,
-    address: {
+  };
+  if (review.location_text) {
+    placeSchema.address = {
       "@type": "PostalAddress",
-      addressLocality: "สุพรรณบุรี",
+      streetAddress: review.location_text,
       addressRegion: "สุพรรณบุรี",
       addressCountry: "TH",
-    },
-  };
+    };
+  }
   if (hasGeo) {
-    jsonLd.geo = {
+    placeSchema.geo = {
       "@type": "GeoCoordinates",
       latitude: review.latitude,
       longitude: review.longitude,
     };
   }
+  const articleSchema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${canonicalUrl}#review`,
+    mainEntityOfPage: canonicalUrl,
+    headline: review.title,
+    description: review.description ?? `รีวิว ${review.title} จังหวัดสุพรรณบุรี`,
+    image: review.cover_image ?? undefined,
+    datePublished: review.created_at,
+    dateModified: review.updated_at,
+    inLanguage: "th-TH",
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    about: { "@id": placeId },
+  };
+  const jsonLd = { "@context": "https://schema.org", "@graph": [articleSchema, placeSchema] };
   // กัน "</script>" ที่อาจแฝงมาในข้อมูล ไม่ให้หลุดออกจาก script tag
   const jsonLdString = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
 
@@ -222,6 +275,15 @@ export default async function ReviewDetailPage({ params }: PageProps) {
                 year: "numeric",
               })}
             </time>
+            {review.updated_at !== review.created_at && (
+              <span className="text-xs text-neutral-400">
+                อัปเดตล่าสุด {new Date(review.updated_at).toLocaleDateString("th-TH", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            )}
           </header>
 
           {review.description && (

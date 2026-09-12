@@ -12,10 +12,10 @@ export interface Review {
   category_label: string | null; cover_image: string | null; facebook_embed_url: string | null;
   tiktok_embed_url: string | null; youtube_embed_url: string | null; google_map_embed_url: string | null; latitude: number | null;
   longitude: number | null; location_text: string | null; facebook_post_id: string | null; youtube_video_id: string | null;
-  is_must_visit: boolean; must_visit_order: number | null; created_at: string; deleted_at: string | null;
+  is_must_visit: boolean; must_visit_order: number | null; created_at: string; updated_at: string; deleted_at: string | null;
 }
 type ReviewRow = Omit<Review, "category_label"> & { categories: { label: string } | { label: string }[] | null; };
-const REVIEW_COLUMNS = "id, title, slug, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, google_map_embed_url, latitude, longitude, location_text, facebook_post_id, youtube_video_id, is_must_visit, must_visit_order, created_at, deleted_at, categories(label)";
+const REVIEW_COLUMNS = "id, title, slug, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, google_map_embed_url, latitude, longitude, location_text, facebook_post_id, youtube_video_id, is_must_visit, must_visit_order, created_at, updated_at, deleted_at, categories(label)";
 
 function toReview(row: ReviewRow): Review {
   const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;

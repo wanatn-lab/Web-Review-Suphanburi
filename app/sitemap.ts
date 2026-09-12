@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const reviewEntries: MetadataRoute.Sitemap = reviews.map((review) => ({
     url: `${SITE_URL}/reviews/${review.slug}`,
-    lastModified: review.created_at,
+    lastModified: review.updated_at,
     changeFrequency: "weekly",
     priority: 0.8,
   }));

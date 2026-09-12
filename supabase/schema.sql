@@ -24,11 +24,27 @@ create table if not exists public.reviews (
   view_count       integer default 0,
   published_at     timestamptz default now(),
   created_at       timestamptz default now(),
+  updated_at       timestamptz not null default now(),
   deleted_at       timestamptz
 );
 
 create index if not exists reviews_category_idx on public.reviews (category);
 create index if not exists reviews_published_at_idx on public.reviews (published_at desc);
+
+create or replace function public.set_reviews_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger reviews_set_updated_at
+before update on public.reviews
+for each row
+execute function public.set_reviews_updated_at();
 
 -- Public read access (this table has no PII — safe to expose via anon key)
 alter table public.reviews enable row level security;

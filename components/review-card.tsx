@@ -29,6 +29,11 @@ function formatThaiDate(iso: string) {
   });
 }
 
+function compactText(value: string, limit = 180) {
+  const characters = Array.from(value.trim());
+  return characters.length > limit ? `${characters.slice(0, limit).join("")}…` : value.trim();
+}
+
 
 function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
   if (review.facebook_embed_url) return { provider: "facebook", url: review.facebook_embed_url };
@@ -87,6 +92,7 @@ export default function ReviewCard({
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
       : null;
   const video = videoSource(review);
+  const cardDescription = review.description ? compactText(review.description) : null;
 
   if (variant === "rail") {
     return (
@@ -100,12 +106,6 @@ export default function ReviewCard({
             <span className={`w-fit rounded px-1.5 py-0.5 text-[0.6rem] font-bold ${badgeClass}`}>{label}</span>
           )}
           <span className="line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white">{review.title}</span>
-          {review.location_text && (
-            <span className="inline-flex items-center gap-1 text-[0.66rem] text-[#F3D9CC]">
-              <PinIcon className="h-2.5 w-2.5" />
-              {review.location_text}
-            </span>
-          )}
         </div>
       </Link>
     );
@@ -126,7 +126,7 @@ export default function ReviewCard({
             url={video.url}
             title={review.title}
             poster={review.cover_image}
-            description={review.description}
+            description={cardDescription}
             mapsUrl={mapsUrl}
             trigger={<Thumb review={review} />}
             triggerClassName="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#FF4B12]"
@@ -145,8 +145,8 @@ export default function ReviewCard({
           </span>
         )}
         <h3 className="line-clamp-2 text-sm font-bold leading-snug text-neutral-900 dark:text-neutral-50">{review.title}</h3>
-        {review.description && (
-          <p className="line-clamp-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{review.description}</p>
+        {cardDescription && (
+          <p className="line-clamp-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{cardDescription}</p>
         )}
 
         <div className="flex flex-wrap gap-1.5">
@@ -154,15 +154,9 @@ export default function ReviewCard({
           <span className="text-xs font-semibold text-[#FF4B12]">#ReviewSuphan</span>
         </div>
 
-        {(review.location_text || review.created_at) && (
+        {review.created_at && (
           <ul className="flex flex-wrap gap-3 text-xs text-neutral-400">
-            {review.location_text && (
-              <li className="inline-flex items-center gap-1">
-                <PinIcon className="h-3 w-3" />
-                {review.location_text}
-              </li>
-            )}
-            {review.created_at && <li>{formatThaiDate(review.created_at)}</li>}
+            <li>{formatThaiDate(review.created_at)}</li>
           </ul>
         )}
       </div>

@@ -11,6 +11,7 @@ export function youtubeThumbnailCandidates(videoId: string): string[] {
   const encodedVideoId = encodeURIComponent(videoId);
   return [
     `https://i.ytimg.com/vi/${encodedVideoId}/maxresdefault.jpg`,
+    `https://i.ytimg.com/vi/${encodedVideoId}/hq720.jpg`,
     `https://i.ytimg.com/vi/${encodedVideoId}/sddefault.jpg`,
     `https://i.ytimg.com/vi/${encodedVideoId}/hqdefault.jpg`,
     `https://i.ytimg.com/vi/${encodedVideoId}/mqdefault.jpg`,

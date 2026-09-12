@@ -119,6 +119,7 @@ test("durationToSeconds parses ISO 8601 durations", () => {
 test("youtubeThumbnailCandidates returns high-resolution fallbacks", () => {
   assert.deepEqual(youtubeThumbnailCandidates("abc123_DEF-"), [
     "https://i.ytimg.com/vi/abc123_DEF-/maxresdefault.jpg",
+    "https://i.ytimg.com/vi/abc123_DEF-/hq720.jpg",
     "https://i.ytimg.com/vi/abc123_DEF-/sddefault.jpg",
     "https://i.ytimg.com/vi/abc123_DEF-/hqdefault.jpg",
     "https://i.ytimg.com/vi/abc123_DEF-/mqdefault.jpg",

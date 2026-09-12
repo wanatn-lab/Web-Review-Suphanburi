@@ -6,6 +6,7 @@ import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
 import PinIcon from "@/components/pin-icon";
 import ShareButton from "@/components/share-button";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
+import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
 import type { Review } from "@/lib/supabase";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
@@ -45,7 +46,16 @@ function videoSource(review: Review): { provider: VideoProvider; url: string } |
 function Thumb({ review }: { review: Review }) {
   return (
     <div className="relative aspect-[9/16] w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-      {review.cover_image ? (
+      {review.youtube_video_id ? (
+        <YouTubeThumbnail
+          videoId={review.youtube_video_id}
+          fallbackSrc={review.cover_image}
+          alt={review.title}
+          fill
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          className="object-cover transition duration-300 group-hover:scale-105"
+        />
+      ) : review.cover_image ? (
         <Image
           src={review.cover_image}
           alt={review.title}

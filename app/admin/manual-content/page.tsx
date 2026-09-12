@@ -8,6 +8,7 @@ import {
   isEmailLoginConfigured,
 } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
 import { loginAdmin, loginAdminWithEmail, logoutAdmin, publishYouTubeImport, rejectYouTubeImport, syncYouTubeNow } from "./actions";
 import { ManualContentForm, type ContentCategory, type EditableManualReview } from "./manual-content-form";
 import { DeleteReviewButton } from "./delete-review-button";
@@ -32,6 +33,7 @@ interface ManualReviewListItem {
 
 interface YouTubeImportListItem {
   id: string;
+  video_id: string;
   video_url: string;
   original_title: string;
   seo_title: string;
@@ -137,7 +139,7 @@ async function getPendingYouTubeImports(): Promise<YouTubeImportListItem[]> {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from("youtube_imports")
-      .select("id, video_url, original_title, seo_title, seo_description, category, cover_image, duration_seconds, video_published_at, location_text, ai_generated")
+      .select("id, video_id, video_url, original_title, seo_title, seo_description, category, cover_image, duration_seconds, video_published_at, location_text, ai_generated")
       .eq("status", "pending")
       .order("video_published_at", { ascending: false })
       .limit(30);
@@ -358,10 +360,15 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
             {pendingYouTubeImports.map((item) => (
               <li key={item.id} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
                 <div className="flex gap-3">
-                  {item.cover_image && (
-                    // YouTube serves a mutable thumbnail URL; a plain image keeps the moderation screen responsive.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.cover_image} alt="" className="h-24 w-16 rounded-lg object-cover" />
+                  {(item.cover_image || item.video_id) && (
+                    <YouTubeThumbnail
+                      videoId={item.video_id}
+                      fallbackSrc={item.cover_image}
+                      alt=""
+                      width={64}
+                      height={96}
+                      className="h-24 w-16 rounded-lg object-cover"
+                    />
                   )}
                   <div className="min-w-0 flex-1">
                     <a href={item.video_url} target="_blank" rel="noreferrer" className="font-bold text-[#B62F08] underline">

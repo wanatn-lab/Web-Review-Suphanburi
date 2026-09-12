@@ -365,8 +365,10 @@ export default async function ManualContentAdminPage({ searchParams }: AdminPage
                       videoId={item.video_id}
                       fallbackSrc={item.cover_image}
                       alt=""
-                      width={64}
-                      height={96}
+                      // Request a 2x thumbnail so the 64px-wide admin preview stays
+                      // sharp on HiDPI displays while keeping the same visual size.
+                      width={128}
+                      height={192}
                       className="h-24 w-16 rounded-lg bg-neutral-100 object-contain dark:bg-neutral-800"
                     />
                   )}

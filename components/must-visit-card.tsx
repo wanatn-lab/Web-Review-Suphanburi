@@ -143,11 +143,11 @@ export function MustVisitSpotlight({ review }: { review: Review }) {
   );
 }
 
-export function MustVisitCard({ review, rank, className = "" }: { review: Review; rank: number; className?: string }) {
+export function MustVisitCard({ review, rank, priority = false, className = "" }: { review: Review; rank: number; priority?: boolean; className?: string }) {
   return (
     <article className={`overflow-hidden rounded-2xl border border-[#F0D7CD] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${className}`}>
       <div className="relative">
-        <ReviewMedia review={review} className="aspect-[4/5]" />
+        <ReviewMedia review={review} priority={priority} className="aspect-[4/5]" />
         <span className="absolute left-3 top-3 rounded-full bg-[#2D160E]/90 px-2.5 py-1 text-xs font-extrabold text-white">#{String(rank).padStart(2, "0")}</span>
       </div>
       <div className="p-4">

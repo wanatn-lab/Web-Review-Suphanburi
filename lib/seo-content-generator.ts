@@ -58,6 +58,13 @@ function truncate(value: string, maxLength: number): string {
   return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
+function truncateSeoTitle(value: string, maxLength = 60): string {
+  const points = [...value.trim()];
+  if (points.length <= maxLength) return points.join("");
+  const cut = points.slice(0, maxLength - 1).join("").trimEnd();
+  return `${cut}…`;
+}
+
 function buildPrompt({ categoryLabel, placeName, caption, transcript }: SeoCopyInput): string {
   const sourceText = [
     caption ? `แคปชั่นต้นฉบับ: ${truncate(caption, MAX_SOURCE_TEXT_CHARS)}` : null,
@@ -133,7 +140,7 @@ function parseModelJson(raw: unknown): GeneratedSeoCopy | null {
     const title = parsed.title?.trim();
     const description = parsed.description?.trim();
     if (!title || !description) return null;
-    return { title, description };
+    return { title: truncateSeoTitle(title), description };
   } catch {
     return null;
   }

@@ -16,6 +16,7 @@ create table if not exists public.reviews (
   tiktok_embed_url text,
   youtube_embed_url text,
   youtube_video_id text unique,
+  video_published_at timestamptz, -- original source upload time for VideoObject
   location_name    text,              -- e.g. "อ.เมือง จ.สุพรรณบุรี"
   district         text,              -- e.g. "อำเภอเมือง"
   location_lat     double precision,

@@ -557,7 +557,13 @@ export async function createManualReview(formData: FormData) {
     redirect(`${ADMIN_PATH}?error=database`);
   }
 
-  const slug = existingSlug ? `${seo.slugBase}-${randomUUID().slice(0, 8)}` : seo.slugBase;
+  const genericSlug = new Set(["food", "cafe", "trip", "stay", "market", "temple", "event", "education", "property", "street-food"]).has(seo.slugBase);
+  // A Thai-only place name can reduce to the category alone (e.g. `trip`).
+  // Add a stable-looking unique suffix at write time so new pages never use
+  // an ambiguous category URL, while preserving the tested slug helper API.
+  const slug = existingSlug || genericSlug
+    ? `${seo.slugBase}-${randomUUID().slice(0, 8)}`
+    : seo.slugBase;
   const coordinates = selectedCoordinates ?? await geocodeLocation(address);
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราว (TikTok/Facebook) มาเก็บถาวรที่ Supabase Storage
   // กันปัญหาลิงก์หมดอายุ (ดูรายละเอียดใน lib/cover-image-mirror.ts) — ถ้ามิเรอร์
@@ -666,6 +672,11 @@ export async function publishYouTubeImport(formData: FormData) {
   }
   const slug = slugCollision ? `${preferredSlug}-${randomUUID().slice(0, 8)}` : preferredSlug;
   const coverImage = await mirrorCoverImage(queued.cover_image, slug);
+  // `created_at` is the publication time on this site, not the original
+  // YouTube upload date.  Otherwise an older clip that an editor approves
+  // today is inserted far down the feed and looks as though it was not
+  // published.  The source upload time remains in youtube_imports for audit.
+  const publishedAt = new Date().toISOString();
 
   const { data: inserted, error: insertError } = await supabaseAdmin
     .from("reviews")
@@ -684,8 +695,9 @@ export async function publishYouTubeImport(formData: FormData) {
       location_text: queued.location_text,
       facebook_post_id: null,
       youtube_video_id: queued.video_id,
+      video_published_at: queued.video_published_at,
       source: "youtube_auto",
-      created_at: queued.video_published_at,
+      created_at: publishedAt,
     })
     .select("slug")
     .single();

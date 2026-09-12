@@ -167,6 +167,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 ติดต่อเรา
               </h2>
               <p className="mt-2 text-sm text-[#FBDDCD]">อีเมล: hello@reviewsuphan.com</p>
+              <div className="mt-3 flex gap-3 text-xs">
+                <Link href="/about" className="underline underline-offset-2 hover:text-white">เกี่ยวกับเรา</Link>
+                <Link href="/contact" className="underline underline-offset-2 hover:text-white">ติดต่อเรา</Link>
+              </div>
             </div>
           </div>
           <div className="border-t border-white/15 px-4 py-4 text-center text-xs text-[#F0C1A8] sm:px-8">

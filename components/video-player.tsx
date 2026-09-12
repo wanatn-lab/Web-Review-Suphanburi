@@ -31,19 +31,19 @@ function youtubeVideoId(value: string): string | null {
   }
 }
 
-function buildEmbedSrc(provider: VideoProvider, url: string): string | null {
+function buildEmbedSrc(provider: VideoProvider, url: string, autoplay = true): string | null {
   if (provider === "facebook") {
     const encoded = encodeURIComponent(url);
-    return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&autoplay=true`;
+    return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&autoplay=${autoplay ? "true" : "false"}`;
   }
   if (provider === "youtube") {
     const id = youtubeVideoId(url);
-    return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0` : null;
+    return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=${autoplay ? "1" : "0"}&rel=0` : null;
   }
   // TikTok: ดึง video id จาก URL แล้วต่อเป็น embed v2 (ไม่ต้องโหลด widget.js ที่หนัก)
   const match = url.match(/video\/(\d+)/);
   return match
-    ? `https://www.tiktok.com/player/v1/${match[1]}?autoplay=1&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=0&rel=0&native_context_menu=0`
+    ? `https://www.tiktok.com/player/v1/${match[1]}?autoplay=${autoplay ? "1" : "0"}&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=0&rel=0&native_context_menu=0`
     : null;
 }
 
@@ -64,6 +64,7 @@ export function VideoPlayer({
   mapsUrl,
   trigger,
   triggerClassName,
+  inline = false,
 }: {
   provider: VideoProvider;
   url: string;
@@ -74,10 +75,12 @@ export function VideoPlayer({
   mapsUrl?: string | null;
   trigger?: ReactNode;
   triggerClassName?: string;
+  /** Render a crawlable, lazy inline player in the initial HTML (detail pages). */
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const embedSrc = buildEmbedSrc(provider, url);
+  const embedSrc = buildEmbedSrc(provider, url, !inline);
   const isYouTube = provider === "youtube";
   const playerSize = isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-sm sm:max-w-md";
 
@@ -115,16 +118,39 @@ export function VideoPlayer({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-label={`เล่นวิดีโอรีวิว: ${title}`}
-        className={triggerClassName ?? `group relative mx-auto block w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ${playerSize}`}
-      >
-        {trigger ?? (
-          <>
-        {poster ? (
+      {inline ? (
+        <div className={`relative mx-auto w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ${playerSize}`}>
+          <iframe
+            ref={iframeRef}
+            src={embedSrc}
+            onLoad={handlePlayerLoad}
+            title={`วิดีโอรีวิว: ${title}`}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-haspopup="dialog"
+            aria-label={`เปิดวิดีโอรีวิวเต็มจอ: ${title}`}
+            className="absolute bottom-3 right-3 z-10 rounded-lg bg-black/70 px-3 py-2 text-xs font-bold text-white hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            เปิดเต็มจอ
+          </button>
+        </div>
+      ) : <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          aria-label={`เล่นวิดีโอรีวิว: ${title}`}
+          className={triggerClassName ?? `group relative mx-auto block w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ${playerSize}`}
+        >
+          {trigger ?? (
+            <>
+          {poster ? (
           // ภาพปกจริงจาก TikTok/Facebook — ไม่ใช้ next/image เพราะเป็น URL ที่หมดอายุได้
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -132,17 +158,17 @@ export function VideoPlayer({
             alt={title}
             className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900" />
-        )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/25 transition group-hover:bg-black/35">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-[#DA3D0D] shadow-xl transition group-hover:scale-110">
-            <PlayGlyph />
-          </span>
-        </div>
-          </>
-        )}
-      </button>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900" />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25 transition group-hover:bg-black/35">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-[#DA3D0D] shadow-xl transition group-hover:scale-110">
+              <PlayGlyph />
+            </span>
+          </div>
+            </>
+          )}
+        </button>}
 
       {open && typeof document !== "undefined" &&
         // Portal ไปที่ body โดยตรง: ไม่ติด stacking context ของการ์ด/ฟีด จึงทับ header

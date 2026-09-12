@@ -5,6 +5,13 @@
 // pulls in next/navigation + Supabase, which node:test can't import cleanly).
 
 export const MAX_META_DESCRIPTION_LENGTH = 155;
+export const MAX_META_TITLE_LENGTH = 60;
+
+export function truncateTitle(text: string, maxLength = MAX_META_TITLE_LENGTH): string {
+  const points = [...text.trim()];
+  if (points.length <= maxLength) return points.join("");
+  return `${points.slice(0, maxLength - 1).join("").trimEnd()}…`;
+}
 
 /**
  * Truncates `text` to at most `maxLength` characters WITHOUT cutting a

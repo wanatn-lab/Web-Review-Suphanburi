@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getReviewBySlug } from "@/lib/supabase";
+import { getReviewBySlug, getReviewsByCategory } from "@/lib/supabase";
 import { defaultCategoryLabel } from "@/lib/categories";
+import { getCategorySeoIntro } from "@/lib/category-seo";
 import { VideoPlayer } from "@/components/video-player";
-import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
+import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH, truncateTitle } from "@/lib/seo-text";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 // app/reviews/[slug]/page.tsx
@@ -81,10 +82,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           MAX_META_DESCRIPTION_LENGTH
         );
     // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี" once.
-    const title = review.title;
+    const title = truncateTitle(review.title);
     // openGraph/twitter titles are NOT run through title.template, so they
     // keep the full "review title | site name" form for social shares.
-    const socialTitle = `${review.title} | ${SITE_NAME}`;
+    const socialTitle = `${title} | ${SITE_NAME}`;
     const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
   
     return {
@@ -159,13 +160,11 @@ export default async function ReviewDetailPage({ params }: PageProps) {
         ? "CafeOrCoffeeShop"
         : review.category === "stay"
           ? "LodgingBusiness"
-          : review.category === "market"
-            ? "ShoppingCenter"
-            : review.category === "trip"
-              ? "TouristAttraction"
-              : review.category === "temple"
-                ? "PlaceOfWorship"
-                : "Place";
+          : review.category === "temple"
+            ? "PlaceOfWorship"
+            : review.category === "street-food"
+              ? "Restaurant"
+              : "Place";
   const placeId = `${canonicalUrl}#place`;
   const placeSchema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -206,9 +205,39 @@ export default async function ReviewDetailPage({ params }: PageProps) {
     publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
     about: { "@id": placeId },
   };
-  const jsonLd = { "@context": "https://schema.org", "@graph": [articleSchema, placeSchema] };
+  const videoSchema: Record<string, unknown> | null = videoUrl && review.cover_image
+    ? {
+        "@type": "VideoObject",
+        "@id": `${canonicalUrl}#video`,
+        name: review.title,
+        description: review.description ?? `วิดีโอรีวิว${review.title}ในจังหวัดสุพรรณบุรี`,
+        thumbnailUrl: [review.cover_image],
+        uploadDate: review.video_published_at ?? review.created_at,
+        inLanguage: "th-TH",
+        isFamilyFriendly: true,
+        embedUrl: videoProvider === "youtube" ? videoUrl : undefined,
+        contentUrl: videoProvider === "youtube" ? undefined : videoUrl,
+        subjectOf: { "@id": `${canonicalUrl}#review` },
+      }
+    : null;
+  const breadcrumbSchema = {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "หน้าแรก", item: SITE_URL },
+      ...(review.category ? [{ "@type": "ListItem", position: 2, name: `${review.category_label ?? defaultCategoryLabel(review.category)}สุพรรณบุรี`, item: `${SITE_URL}/category/${review.category}` }] : []),
+      { "@type": "ListItem", position: review.category ? 3 : 2, name: review.title, item: canonicalUrl },
+    ],
+  };
+  const jsonLd = { "@context": "https://schema.org", "@graph": [articleSchema, placeSchema, breadcrumbSchema, ...(videoSchema ? [videoSchema] : [])] };
   // กัน "</script>" ที่อาจแฝงมาในข้อมูล ไม่ให้หลุดออกจาก script tag
   const jsonLdString = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
+
+  const relatedReviews = review.category
+    ? (await getReviewsByCategory(review.category, 4)).filter((item) => item.id !== review.id).slice(0, 3)
+    : [];
+  const editorialIntro = review.category
+    ? getCategorySeoIntro(review.category, review.category_label ?? defaultCategoryLabel(review.category))
+    : "รีวิวสุพรรณบุรีจากวิดีโอจริง พร้อมข้อมูลที่ช่วยให้วางแผนแวะได้ง่ายขึ้น";
 
   return (
     <>
@@ -250,6 +279,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
                 poster={review.cover_image}
                 description={review.description}
                 mapsUrl={directionsUrl}
+                inline
               />
             </div>
           )}
@@ -294,6 +324,31 @@ export default async function ReviewDetailPage({ params }: PageProps) {
               <p className="text-[0.95rem] leading-[1.8] text-neutral-600 dark:text-neutral-300">
                 {review.description}
               </p>
+            </section>
+          )}
+
+          <section className="border-t border-neutral-100 pt-6 dark:border-neutral-800" aria-labelledby="planning-heading">
+            <h2 id="planning-heading" className="mb-2 text-base font-extrabold text-neutral-900 dark:text-neutral-50">
+              วางแผนแวะ{review.category_label ?? "สุพรรณบุรี"}
+            </h2>
+            <p className="text-[0.95rem] leading-[1.8] text-neutral-600 dark:text-neutral-300">{editorialIntro}</p>
+            {review.location_text && <p className="mt-3 text-sm text-neutral-500">พิกัดที่แสดงในหน้านี้: {review.location_text} ควรตรวจสอบเส้นทางและเวลาเปิดทำการล่าสุดก่อนออกเดินทาง</p>}
+          </section>
+
+          {relatedReviews.length > 0 && (
+            <section className="border-t border-neutral-100 pt-6 dark:border-neutral-800" aria-labelledby="related-heading">
+              <h2 id="related-heading" className="mb-3 text-base font-extrabold text-neutral-900 dark:text-neutral-50">
+                รีวิว{review.category_label ?? "สุพรรณบุรี"}ที่เกี่ยวข้อง
+              </h2>
+              <ul className="space-y-2 text-sm">
+                {relatedReviews.map((item) => (
+                  <li key={item.id}>
+                    <Link className="font-bold text-[#B62F08] underline-offset-2 hover:underline" href={`/reviews/${item.slug}`}>
+                      {item.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

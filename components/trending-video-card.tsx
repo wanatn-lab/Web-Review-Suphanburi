@@ -6,6 +6,7 @@ import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
 import type { Review } from "@/lib/supabase";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
+import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
 
 function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
   if (review.facebook_embed_url) return { provider: "facebook", url: review.facebook_embed_url };
@@ -49,7 +50,15 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
 
   const cover = (
     <div className="relative aspect-[9/16] w-full overflow-hidden bg-neutral-100 text-left dark:bg-neutral-800">
-      {review.cover_image ? (
+      {review.youtube_video_id ? (
+        <YouTubeThumbnail
+          videoId={review.youtube_video_id}
+          alt={review.title}
+          fill
+          sizes="(min-width: 1024px) 14rem, (min-width: 640px) 30vw, 9rem"
+          className="object-cover transition duration-300 group-hover:scale-105"
+        />
+      ) : review.cover_image ? (
         <Image
           src={review.cover_image}
           alt={review.title}

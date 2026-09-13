@@ -10,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
     // URL crawlable so Google can see that directive; robots.txt must not be
     // used as the indexation control for a page that should be excluded.
     rules: [{ userAgent: "*", allow: "/" }],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/video-sitemap.xml`],
   };
 }

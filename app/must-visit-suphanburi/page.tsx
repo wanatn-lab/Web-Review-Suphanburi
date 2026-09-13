@@ -4,7 +4,7 @@ import { getMustVisitReviews } from "@/lib/supabase";
 import { MUST_VISIT_COLLECTION_LIMIT } from "@/lib/must-visit";
 import { MustVisitCard, MustVisitSpotlight } from "@/components/must-visit-card";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 const PAGE_URL = `${SITE_URL}/must-visit-suphanburi`;
 const PAGE_TITLE = "มาสุพรรณบุรีต้องแวะ | ที่กิน ที่เที่ยว คาเฟ่น่าไป";
 const PAGE_DESCRIPTION = "วางแผนเที่ยวสุพรรณบุรีด้วยพิกัดคัดสรร ร้านอาหาร คาเฟ่ ที่เที่ยว และตลาดที่ควรแวะ พร้อมคลิปรีวิวจริงและแผนที่";

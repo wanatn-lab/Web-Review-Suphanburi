@@ -6,7 +6,7 @@ import ReviewCard from "@/components/review-card";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 import { getCategorySeoIntro } from "@/lib/category-seo";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = { probperty: "property" };
 
 export const revalidate = 60;

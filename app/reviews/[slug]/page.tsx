@@ -18,7 +18,7 @@ import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 // `params.slug` below to `const { slug } = await params;` if you're on 15.
 // This file targets the Next.js 14 App Router baseline.
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 
 function seoKeywordSuffix(category: string | null): string {

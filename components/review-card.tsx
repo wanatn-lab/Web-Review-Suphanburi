@@ -9,7 +9,7 @@ import { VideoPlayer, type VideoProvider } from "@/components/video-player";
 import type { Review } from "@/lib/supabase";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 
 function PlayBadge() {
   return (

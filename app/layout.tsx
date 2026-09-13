@@ -24,7 +24,7 @@ const notoSansThai = Noto_Sans_Thai({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 const SITE_DESCRIPTION = "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok อัปเดตทุกสัปดาห์";

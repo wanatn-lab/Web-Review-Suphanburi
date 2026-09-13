@@ -11,6 +11,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanbu
 // sitemap on request so removed or renamed URLs cannot remain in Google's
 // submission for an entire build-cache lifetime.
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [reviews, categories] = await Promise.all([getAllReviews(500), getCategories()]);

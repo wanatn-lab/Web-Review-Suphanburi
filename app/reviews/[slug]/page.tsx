@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { getReviewBySlug, getReviewsByCategory } from "@/lib/supabase";
 import { defaultCategoryLabel } from "@/lib/categories";
@@ -20,6 +20,13 @@ import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
+
+// Keep old shared links working after replacing generic imported slugs with
+// semantic restaurant slugs. Only review URLs use this map; category URLs are
+// handled separately in app/category/[category]/page.tsx.
+const LEGACY_REVIEW_REDIRECTS: Record<string, string> = {
+  trip: "zon-saep-uthong",
+};
 
 function seoKeywordSuffix(category: string | null): string {
   const suffixByCategory: Record<string, string> = {
@@ -113,6 +120,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ReviewDetailPage({ params }: PageProps) {
+  const redirectedSlug = LEGACY_REVIEW_REDIRECTS[params.slug];
+  if (redirectedSlug) permanentRedirect(`/reviews/${redirectedSlug}`);
+
   const review = await getReviewBySlug(params.slug);
 
   if (!review) {

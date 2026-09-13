@@ -7,6 +7,11 @@ import { getCategories } from "@/lib/categories";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 
+// Reviews and slugs are edited in Supabase without a code deploy. Render the
+// sitemap on request so removed or renamed URLs cannot remain in Google's
+// submission for an entire build-cache lifetime.
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [reviews, categories] = await Promise.all([getAllReviews(500), getCategories()]);
 

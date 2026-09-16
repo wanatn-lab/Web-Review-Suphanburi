@@ -52,6 +52,7 @@ function Thumb({ review }: { review: Review }) {
           fallbackSrc={review.cover_image}
           alt={review.title}
           fill
+          unoptimized
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover transition duration-300 group-hover:scale-105"
         />

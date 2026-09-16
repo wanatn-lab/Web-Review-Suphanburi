@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllReviews } from "@/lib/supabase";
 import { getCategories } from "@/lib/categories";
+import { isMustVisitWatchPageEligible } from "@/lib/video-seo";
 
 // app/sitemap.ts — Next.js auto-serves this at /sitemap.xml
 // ดึงรีวิวทั้งหมดจาก Supabase มาขึ้น sitemap อัตโนมัติ ไม่ต้องอัปเดตมือ
@@ -24,6 +25,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  const mustVisitVideoEntries: MetadataRoute.Sitemap = reviews
+    .filter(isMustVisitWatchPageEligible)
+    .map((review) => ({
+      url: `${SITE_URL}/videos/${review.slug}`,
+      lastModified: review.updated_at,
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    }));
+
   const categoryEntries: MetadataRoute.Sitemap = categories.map((c) => ({
     url: `${SITE_URL}/category/${c.slug}`,
     changeFrequency: "daily",
@@ -37,5 +47,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/contact`, changeFrequency: "monthly", priority: 0.3 },
     ...categoryEntries,
     ...reviewEntries,
+    ...mustVisitVideoEntries,
   ];
 }

@@ -1,4 +1,5 @@
 import { getAllReviews } from "@/lib/supabase";
+import { getReviewVideoEmbedUrl, getReviewVideoSource, isMustVisitWatchPageEligible } from "@/lib/video-seo";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.reviewsuphanburi.com";
 
@@ -16,7 +17,8 @@ function videoEntry(review: Awaited<ReturnType<typeof getAllReviews>>[number]): 
   const youtubePlayer = review.youtube_video_id
     ? `https://www.youtube.com/embed/${encodeURIComponent(review.youtube_video_id)}`
     : null;
-  const playerLoc = youtubePlayer ?? review.facebook_embed_url ?? review.tiktok_embed_url ?? review.youtube_embed_url;
+  const source = getReviewVideoSource(review);
+  const playerLoc = source ? getReviewVideoEmbedUrl(source) : youtubePlayer;
   const thumbnail = review.cover_image ?? (review.youtube_video_id
     ? `https://i.ytimg.com/vi/${encodeURIComponent(review.youtube_video_id)}/hqdefault.jpg`
     : null);
@@ -28,7 +30,7 @@ function videoEntry(review: Awaited<ReturnType<typeof getAllReviews>>[number]): 
 
   return [
     "  <url>",
-    `    <loc>${escapeXml(`${SITE_URL}/reviews/${review.slug}`)}</loc>`,
+    `    <loc>${escapeXml(isMustVisitWatchPageEligible(review) ? `${SITE_URL}/videos/${review.slug}` : `${SITE_URL}/reviews/${review.slug}`)}</loc>`,
     "    <video:video>",
     `      <video:thumbnail_loc>${escapeXml(thumbnail)}</video:thumbnail_loc>`,
     `      <video:title>${escapeXml(title)}</video:title>`,

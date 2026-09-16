@@ -7,6 +7,7 @@ import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import type { Review } from "@/lib/supabase";
 import PinIcon from "@/components/pin-icon";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
+import { isMustVisitWatchPageEligible } from "@/lib/video-seo";
 
 function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
   if (review.facebook_embed_url) return { provider: "facebook", url: review.facebook_embed_url };
@@ -129,6 +130,14 @@ export function MustVisitSpotlight({ review }: { review: Review }) {
           </h2>
           {review.description && <p className="mt-4 line-clamp-3 text-sm font-medium leading-7 text-white sm:text-base">{review.description}</p>}
           <div className="mt-7 flex flex-wrap gap-3">
+            {isMustVisitWatchPageEligible(review) && (
+              <Link
+                href={`/videos/${review.slug}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-extrabold text-[#8A381F] transition hover:bg-[#FFF2ED] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#2D160E]"
+              >
+                ดูวิดีโอแบบเต็มหน้า
+              </Link>
+            )}
             <Link
               href={`/reviews/${review.slug}`}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#FFDD00] px-5 text-sm font-extrabold text-[#3B2500] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#2D160E]"
@@ -153,6 +162,11 @@ export function MustVisitCard({ review, rank, priority = false, className = "" }
       <div className="p-4">
         <CategoryBadge review={review} />
         <h3 className="mt-3 line-clamp-2 font-[family-name:var(--font-kanit)] text-lg font-extrabold leading-snug text-[#3B1C12]">{review.title}</h3>
+        {isMustVisitWatchPageEligible(review) && (
+          <Link href={`/videos/${review.slug}`} className="mt-3 inline-flex text-sm font-extrabold text-[#B62F08] underline underline-offset-4 hover:text-[#7E260C]">
+            ดูวิดีโอแบบเต็มหน้า
+          </Link>
+        )}
         <div className="mt-4 flex gap-2">
           <Link href={`/reviews/${review.slug}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[#DA3D0D] px-3 text-sm font-extrabold text-white transition hover:bg-[#B62F08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08] focus-visible:ring-offset-2">ดูรีวิว</Link>
           <MapsLink review={review} compact />

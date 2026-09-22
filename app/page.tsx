@@ -108,6 +108,21 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="bg-white px-4 py-8 sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900">คู่มือรีวิวสุพรรณบุรีสำหรับวางแผนเที่ยว</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-neutral-600">
+            สุพรรณบุรีมีทั้งเรื่องราวประวัติศาสตร์ วัฒนธรรมริมแม่น้ำท่าจีน แหล่งท่องเที่ยวธรรมชาติ ร้านอาหาร คาเฟ่ ตลาด และที่พักในหลายอำเภอ หน้านี้รวบรวมรีวิวจากวิดีโอจริงให้ค้นหาตามความสนใจและพิกัดได้ง่าย เหมาะสำหรับวางแผนทริปวันเดียวหรือค้างคืน โดยควรตรวจเวลาเปิดทำการและรายละเอียดกับสถานที่ก่อนเดินทาง
+          </p>
+          <p className="mt-3 text-xs text-neutral-500">
+            ข้อมูลภาพรวมจังหวัดอ้างอิงจาก{" "}
+            <a href="https://www.tourismthailand.org/Destinations/Provinces/SuphanBuri/239" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[#B62F08]">
+              การท่องเที่ยวแห่งประเทศไทย
+            </a>
+          </p>
+        </div>
+      </section>
+
       {featuredReviews.length > 0 && (
         <section className="bg-[#FFF8F5] px-4 py-10 sm:px-8 sm:py-12">
           <div className="mx-auto max-w-6xl">

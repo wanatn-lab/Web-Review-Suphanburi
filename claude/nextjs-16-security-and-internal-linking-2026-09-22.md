@@ -30,9 +30,10 @@ These are rendered server-side and therefore visible to crawlers without requiri
 | Stage | Typecheck | Tests | Production build |
 | --- | --- | --- | --- |
 | Next 15.5.25 | Passed | 72/72 passed | Passed |
-| Next 16.3.5 | Passed | 72/72 passed | Passed with Turbopack |
+| Next 16.3.5 | Passed | 72/72 passed | Passed locally with Turbopack; production uses webpack fallback |
 
 - `npm audit --omit=dev --json`: 0 vulnerabilities after the Next 16 upgrade.
+- Vercel's Turbopack build failed to resolve the internal `next/font/google` module. The production build script now explicitly uses `next build --webpack`, which preserves `next/font` while avoiding that Vercel-specific resolver failure.
 - The Next 16 build used non-secret placeholder public environment values only. It compiled, type-checked, generated static routes, and exercised `/admin/manual-content`, `/category/[category]`, `/reviews/[slug]`, `/must-visit-suphanburi`, `/sitemap.xml`, and the OG image route. Data calls returned their existing error/fallback paths because the placeholder Supabase endpoint is not the production database.
 
 ## Preview deployment and visual checks

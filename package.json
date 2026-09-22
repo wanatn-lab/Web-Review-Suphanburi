@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "node --conditions=react-server --test --require tsx/cjs tests/*.test.ts",
     "typecheck": "tsc --noEmit"

@@ -37,9 +37,9 @@ These are rendered server-side and therefore visible to crawlers without requiri
 
 ## Preview deployment and visual checks
 
-A preview deployment has not been created yet. The local Vercel CLI is logged out and requested device authentication. Do not use a temporary/unlinked deployment because it would not inherit the existing Vercel project's environment variables.
+Vercel Git integration created a successful preview deployment: https://reviewsuphanburi-eur9q1559-nutt4.vercel.app. The local Vercel CLI remains logged out, but no local deploy was needed. The preview is protected by Vercel Authentication, so unauthenticated HTTP requests receive the Vercel login page rather than application HTML. Do not use a temporary/unlinked deployment because it would not inherit the existing Vercel project's environment variables.
 
-After authenticating the CLI, deploy this branch to the existing project as a preview (without `--prod`) and manually verify:
+Sign in to Vercel in a browser with access to this project, open the preview URL above, and manually verify:
 
 1. `/admin/manual-content` — existing admin access and form actions.
 2. A review URL such as `/reviews/340-food` — related review cards and the category link.

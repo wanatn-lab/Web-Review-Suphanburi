@@ -6,10 +6,11 @@ import ReviewCard from "@/components/review-card";
 // ไม่ index หน้านี้ (กัน duplicate content จาก query string ต่างๆ)
 
 interface PageProps {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }
 
-export function generateMetadata({ searchParams }: PageProps): Metadata {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const searchParams = await props.searchParams;
   const q = searchParams.q?.trim() ?? "";
   return {
     title: q ? `ผลค้นหา "${q}"` : "ค้นหารีวิว",
@@ -17,7 +18,8 @@ export function generateMetadata({ searchParams }: PageProps): Metadata {
   };
 }
 
-export default async function SearchPage({ searchParams }: PageProps) {
+export default async function SearchPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const q = searchParams.q?.trim() ?? "";
   const results = q ? await searchReviews(q, 24) : [];
 

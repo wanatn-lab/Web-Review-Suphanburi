@@ -33,8 +33,8 @@ export async function getAllReviews(limit = 24): Promise<Review[]> {
   if (error) { console.error("[getAllReviews]:", error.message); return []; }
   return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
 }
-export async function getReviewsByCategory(category: string, limit = 24): Promise<Review[]> {
-  const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("category", category).order("created_at", { ascending: false }).limit(limit);
+export async function getReviewsByCategory(category: string): Promise<Review[]> {
+  const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("category", category).order("created_at", { ascending: false });
   if (error) { console.error(`[getReviewsByCategory] category="${category}":`, error.message); return []; }
   return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
 }

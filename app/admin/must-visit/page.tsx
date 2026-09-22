@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "จัดการพิกัดต้องแวะ", robots: { index: false, follow: false } };
 
 export default async function MustVisitAdminPage() {
-  const authenticated = isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+  const authenticated = isAdminSessionValid((await cookies()).get(ADMIN_SESSION_COOKIE)?.value);
   if (!authenticated) return <main className="mx-auto max-w-2xl px-4 py-10"><h1 className="text-2xl font-extrabold">เข้าสู่ระบบก่อนจัดการพิกัด</h1><Link href="/admin/manual-content" className="mt-4 inline-flex min-h-11 items-center rounded-lg px-3 font-bold text-[#B62F08] underline">ไปหน้าเข้าสู่ระบบผู้ดูแล</Link></main>;
   const supabase = getSupabaseAdmin();
   const [{ data, error }, { data: availableData, error: availableError }] = await Promise.all([

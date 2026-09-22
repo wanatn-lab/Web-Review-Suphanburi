@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   // Read cookies through Next's request store rather than manually parsing the
   // Cookie header. Vercel/proxy formatting is not guaranteed to use "; " and
   // could otherwise reject a valid admin session.
-  const sessionToken = cookies().get(ADMIN_SESSION_COOKIE)?.value;
+  const sessionToken = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
   if (!isAdminSessionValid(sessionToken)) {
     return NextResponse.json({ error: "กรุณาเข้าสู่ระบบผู้ดูแลก่อนค้นหาสถานที่" }, { status: 401 });
   }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getMustVisitReviews } from "@/lib/supabase";
+import { getCategories } from "@/lib/categories";
 import { MUST_VISIT_COLLECTION_LIMIT } from "@/lib/must-visit";
 import { MustVisitCard, MustVisitSpotlight } from "@/components/must-visit-card";
 
@@ -30,7 +31,10 @@ export const metadata: Metadata = {
 };
 
 export default async function MustVisitSuphanburiPage() {
-  const reviews = await getMustVisitReviews(MUST_VISIT_COLLECTION_LIMIT);
+  const [reviews, categories] = await Promise.all([
+    getMustVisitReviews(MUST_VISIT_COLLECTION_LIMIT),
+    getCategories(),
+  ]);
   const [spotlight, ...moreReviews] = reviews;
   const schema = { "@context": "https://schema.org", "@graph": [
     { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "หน้าแรก", item: SITE_URL }, { "@type": "ListItem", position: 2, name: "มาสุพรรณบุรีต้องแวะ", item: PAGE_URL }] },
@@ -101,8 +105,8 @@ export default async function MustVisitSuphanburiPage() {
           <p className="text-xs font-extrabold tracking-wide text-[#B62F08]">หาเพิ่มตามสไตล์ทริป</p>
           <h2 className="mt-1 font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-[#3B1C12]">วันนี้อยากแวะที่ไหน?</h2>
           <div className="mt-5 flex flex-wrap gap-2">
-            {[{ href: "/category/food", label: "ร้านอาหาร" }, { href: "/category/cafe", label: "คาเฟ่" }, { href: "/category/trip", label: "ที่เที่ยว" }, { href: "/category/market", label: "ตลาด" }].map((item) => (
-              <Link key={item.href} href={item.href} className="inline-flex min-h-11 items-center rounded-full border border-[#E5B8A7] bg-white px-4 text-sm font-bold text-[#7E260C] transition hover:border-[#B62F08] hover:bg-[#FFF8F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08]">{item.label}</Link>
+            {categories.map((category) => (
+              <Link key={category.slug} href={`/category/${category.slug}`} className="inline-flex min-h-11 items-center rounded-full border border-[#E5B8A7] bg-white px-4 text-sm font-bold text-[#7E260C] transition hover:border-[#B62F08] hover:bg-[#FFF8F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08]">{category.label}</Link>
             ))}
           </div>
         </aside>

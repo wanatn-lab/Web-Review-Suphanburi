@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getReviewBySlug } from "@/lib/supabase";
+import { getReviewBySlug, getReviewsByCategory } from "@/lib/supabase";
 import { defaultCategoryLabel } from "@/lib/categories";
 import { VideoPlayer } from "@/components/video-player";
+import ReviewCard from "@/components/review-card";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
@@ -13,9 +14,8 @@ import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 // (LocalBusiness, Geo-SEO) server-side, and lazy-loads every embed
 // (Facebook video, TikTok video, Google Map) so first paint stays fast.
 //
-// NOTE (Next.js 15+): `params` becomes a Promise in Next 15 — change every
-// `params.slug` below to `const { slug } = await params;` if you're on 15.
-// This file targets the Next.js 14 App Router baseline.
+// Next.js 15+ passes `params` as a Promise; this route awaits it before
+// reading the slug so it remains compatible with Next.js 16.
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
@@ -57,67 +57,73 @@ function seoKeywordSuffix(category: string | null): string {
 export const revalidate = 60;
 
 interface PageProps {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-    const review = await getReviewBySlug(params.slug);
-  
-    if (!review) {
-          return {
-                  // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี".
-                  title: "ไม่พบรีวิวนี้",
-                  description:
-                            "ไม่พบข้อมูลรีวิวที่คุณค้นหา กรุณาเลือกดูรีวิวร้านอาหารสุพรรณบุรี และที่เที่ยวสุพรรณบุรีอื่นๆ ของเราแทนได้",
-                  robots: { index: false, follow: true },
-          };
-    }
-  
-    const rawDescription =
-          review.description ?? `รีวิว ${review.title} อัปเดตล่าสุด พร้อมพิกัดและวิดีโอรีวิวจริงจากสุพรรณบุรี`;
-    const description = buildMetaDescription(
-          rawDescription,
-          seoKeywordSuffix(review.category),
-          MAX_META_DESCRIPTION_LENGTH
-        );
-    // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี" once.
-    const title = review.title;
-    // openGraph/twitter titles are NOT run through title.template, so they
-    // keep the full "review title | site name" form for social shares.
-    const socialTitle = `${review.title} | ${SITE_NAME}`;
-    const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
-  
-    return {
-          title,
-          description,
-          alternates: { canonical: canonicalUrl },
-          openGraph: {
-                  title: socialTitle,
-                  description,
-                  url: canonicalUrl,
-                  siteName: SITE_NAME,
-                  locale: "th_TH",
-                  type: "article",
-                  images: review.cover_image
-                            ? [{ url: review.cover_image, width: 1200, height: 630, alt: review.title }]
-                            : [],
-          },
-          twitter: {
-                  card: review.cover_image ? "summary_large_image" : "summary",
-                  title: socialTitle,
-                  description,
-                  images: review.cover_image ? [review.cover_image] : [],
-          },
-    };
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
+  const review = await getReviewBySlug(params.slug);
+
+  if (!review) {
+        return {
+                // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี".
+                title: "ไม่พบรีวิวนี้",
+                description:
+                          "ไม่พบข้อมูลรีวิวที่คุณค้นหา กรุณาเลือกดูรีวิวร้านอาหารสุพรรณบุรี และที่เที่ยวสุพรรณบุรีอื่นๆ ของเราแทนได้",
+                robots: { index: false, follow: true },
+        };
+  }
+
+  const rawDescription =
+        review.description ?? `รีวิว ${review.title} อัปเดตล่าสุด พร้อมพิกัดและวิดีโอรีวิวจริงจากสุพรรณบุรี`;
+  const description = buildMetaDescription(
+        rawDescription,
+        seoKeywordSuffix(review.category),
+        MAX_META_DESCRIPTION_LENGTH
+      );
+  // Bare title -- root layout's title.template adds " | รีวิวสุพรรณบุรี" once.
+  const title = review.title;
+  // openGraph/twitter titles are NOT run through title.template, so they
+  // keep the full "review title | site name" form for social shares.
+  const socialTitle = `${review.title} | ${SITE_NAME}`;
+  const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
+
+  return {
+        title,
+        description,
+        alternates: { canonical: canonicalUrl },
+        openGraph: {
+                title: socialTitle,
+                description,
+                url: canonicalUrl,
+                siteName: SITE_NAME,
+                locale: "th_TH",
+                type: "article",
+                images: review.cover_image
+                          ? [{ url: review.cover_image, width: 1200, height: 630, alt: review.title }]
+                          : [],
+        },
+        twitter: {
+                card: review.cover_image ? "summary_large_image" : "summary",
+                title: socialTitle,
+                description,
+                images: review.cover_image ? [review.cover_image] : [],
+        },
+  };
 }
 
-export default async function ReviewDetailPage({ params }: PageProps) {
+export default async function ReviewDetailPage(props: PageProps) {
+  const params = await props.params;
   const review = await getReviewBySlug(params.slug);
 
   if (!review) {
     // ไม่พบข้อมูล -> Next.js render app/not-found.tsx (โทนส้ม/ขาวตรงแบรนด์)
     notFound();
   }
+
+  const relatedReviews = review.category
+    ? (await getReviewsByCategory(review.category)).filter((candidate) => candidate.slug !== review.slug).slice(0, 6)
+    : [];
 
   const canonicalUrl = `${SITE_URL}/reviews/${review.slug}`;
   const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
@@ -307,6 +313,21 @@ export default async function ReviewDetailPage({ params }: PageProps) {
               <PinIcon />
               เปิดพิกัดใน Google Maps
             </a>
+          )}
+
+          {relatedReviews.length > 0 && review.category && (
+            <section className="mt-10 border-t border-neutral-200 pt-8 dark:border-neutral-800" aria-labelledby="related-reviews-heading">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-extrabold tracking-wide text-[#B62F08]">ดูต่อในหมวดเดียวกัน</p>
+                  <h2 id="related-reviews-heading" className="mt-1 text-xl font-extrabold text-neutral-900 dark:text-neutral-50">รีวิว{review.category_label ?? defaultCategoryLabel(review.category)}ที่เกี่ยวข้อง</h2>
+                </div>
+                <Link href={`/category/${review.category}`} className="text-sm font-bold text-[#B62F08] underline underline-offset-4 hover:text-[#7E260C]">ดูทั้งหมดในหมวดนี้</Link>
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {relatedReviews.map((relatedReview) => <ReviewCard key={relatedReview.id} review={relatedReview} />)}
+              </div>
+            </section>
           )}
         </article>
       </main>

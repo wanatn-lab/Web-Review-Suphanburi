@@ -73,7 +73,7 @@ export type MapLocationSearchState =
  * centroid instead of the actual storefront.
  */
 export async function searchMapLocations(rawQuery: string): Promise<MapLocationSearchState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { error: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบผู้ดูแลอีกครั้ง" };
   }
 
@@ -143,7 +143,7 @@ export async function searchMapLocations(rawQuery: string): Promise<MapLocationS
 }
 
 export async function getMapLocationDetails(placeId: string): Promise<SelectedMapLocation | { error: string }> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { error: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบผู้ดูแลอีกครั้ง" };
   }
   if (!/^[A-Za-z0-9_-]{1,512}$/.test(placeId)) {
@@ -293,8 +293,8 @@ async function resolveCoverImage(imageUrl: string | null, referenceUrl: string |
   }
 }
 
-function isAuthenticated(): boolean {
-  return isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+async function isAuthenticated(): Promise<boolean> {
+  return isAdminSessionValid((await cookies()).get(ADMIN_SESSION_COOKIE)?.value);
 }
 
 function readOptionalText(formData: FormData, key: string, maxLength: number): string | null | undefined {
@@ -336,7 +336,7 @@ export async function importFacebookDraft(
   _previousState: FacebookImportState,
   formData: FormData
 ): Promise<FacebookImportState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
   }
 
@@ -358,7 +358,7 @@ export async function importTikTokDraft(
   _previousState: TikTokImportState,
   formData: FormData
 ): Promise<TikTokImportState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
   }
 
@@ -381,7 +381,7 @@ export async function importCaptionDraft(
   _previousState: CaptionImportState,
   formData: FormData
 ): Promise<CaptionImportState> {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     return { status: "error", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" };
   }
 
@@ -421,7 +421,7 @@ export async function loginAdmin(formData: FormData) {
     redirect(`${ADMIN_PATH}?error=config`);
   }
 
-  cookies().set(ADMIN_SESSION_COOKIE, token, {
+  (await cookies()).set(ADMIN_SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
@@ -433,7 +433,7 @@ export async function loginAdmin(formData: FormData) {
 }
 
 export async function logoutAdmin() {
-  cookies().set(ADMIN_SESSION_COOKIE, "", {
+  (await cookies()).set(ADMIN_SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
@@ -445,7 +445,7 @@ export async function logoutAdmin() {
 
 /** Runs the exact same private queue import as the nightly Vercel Cron. */
 export async function syncYouTubeNow() {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -496,7 +496,7 @@ export async function loginAdminWithEmail(formData: FormData) {
     redirect(`${ADMIN_PATH}?error=config`);
   }
 
-  cookies().set(ADMIN_SESSION_COOKIE, token, {
+  (await cookies()).set(ADMIN_SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
@@ -508,7 +508,7 @@ export async function loginAdminWithEmail(formData: FormData) {
 }
 
 export async function createManualReview(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -558,7 +558,7 @@ export async function createManualReview(formData: FormData) {
   }
 
   const slug = existingSlug ? `${seo.slugBase}-${randomUUID().slice(0, 8)}` : seo.slugBase;
-  const coordinates = selectedCoordinates ?? await geocodeLocation(address);
+  const coordinates = selectedCoordinates ?? (await geocodeLocation(address));
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราว (TikTok/Facebook) มาเก็บถาวรที่ Supabase Storage
   // กันปัญหาลิงก์หมดอายุ (ดูรายละเอียดใน lib/cover-image-mirror.ts) — ถ้ามิเรอร์
   // ไม่สำเร็จจะได้ imageUrl เดิมกลับมาแทน ไม่ทำให้บันทึกรีวิวล้มเหลว
@@ -609,7 +609,7 @@ function isUuid(value: string): boolean {
 /** Publish one reviewed YouTube import. This is deliberately separate from
  * the cron route so a synced clip never becomes public without an editor. */
 export async function publishYouTubeImport(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -714,7 +714,7 @@ export async function publishYouTubeImport(formData: FormData) {
 /** Keeps the source record for audit/deduplication while removing it from the
  * editor queue. Rejected video IDs are never imported again. */
 export async function rejectYouTubeImport(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -740,7 +740,7 @@ export async function rejectYouTubeImport(formData: FormData) {
 }
 
 export async function updateManualReview(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -774,7 +774,7 @@ export async function updateManualReview(formData: FormData) {
     redirect(`${ADMIN_PATH}?error=validation`);
   }
   const seo = await createEnhancedSeoContent(categoryConfig, placeName, reviewContent);
-  const coordinates = selectedCoordinates ?? await geocodeLocation(address);
+  const coordinates = selectedCoordinates ?? (await geocodeLocation(address));
   const embedUrls = embedUrlsForReference(referenceUrl);
   // ดาวน์โหลดภาพปกจาก CDN ชั่วคราวมาเก็บถาวรที่ Supabase Storage เหมือนตอนสร้าง —
   // ถ้าเป็นภาพที่มิเรอร์ไว้แล้วจากรอบก่อน (ชี้มาที่ Storage ของเราเอง) จะข้ามการ
@@ -819,7 +819,7 @@ export async function updateManualReview(formData: FormData) {
 
 
 export async function saveCategory(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 
@@ -867,7 +867,7 @@ export async function saveCategory(formData: FormData) {
 
 
 export async function deleteManualReview(formData: FormData) {
-  if (!isAuthenticated()) {
+  if (!(await isAuthenticated())) {
     redirect(`${ADMIN_PATH}?error=session`);
   }
 

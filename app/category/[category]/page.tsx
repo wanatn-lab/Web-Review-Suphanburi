@@ -9,7 +9,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.c
 const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = { probperty: "property" };
 
 export const revalidate = 60;
-interface PageProps { params: { category: string }; }
+interface PageProps { params: Promise<{ category: string }>; }
 
 // SEO fix (Sep 2026): this fallback description used to always append the
 // fixed suffix "| ร้านอาหารสุพรรณบุรี, ที่เที่ยวสุพรรณบุรี" to EVERY category
@@ -21,7 +21,8 @@ interface PageProps { params: { category: string }; }
 // MAX_META_DESCRIPTION_LENGTH. An admin-provided category.seo_description is
 // used exactly as entered -- it isn't the templated fallback this bug was
 // about, so it's left untouched.
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const redirectedSlug = LEGACY_CATEGORY_REDIRECTS[params.category];
   if (redirectedSlug) permanentRedirect(`/category/${redirectedSlug}`);
   const category = await getCategoryBySlug(params.category);
@@ -41,12 +42,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function CategoryPage({ params }: PageProps) {
+export default async function CategoryPage(props: PageProps) {
+  const params = await props.params;
   const redirectedSlug = LEGACY_CATEGORY_REDIRECTS[params.category];
   if (redirectedSlug) permanentRedirect(`/category/${redirectedSlug}`);
   const category = await getCategoryBySlug(params.category);
   if (!category) notFound();
-  const reviews = await getReviewsByCategory(category.slug, 24);
+  const reviews = await getReviewsByCategory(category.slug);
   const label = category.label;
   const categoryUrl = `${SITE_URL}/category/${category.slug}`;
   const structuredData = {

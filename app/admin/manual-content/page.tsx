@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 interface AdminPageProps {
-  searchParams: { created?: string; updated?: string; deleted?: string; category?: string; edit?: string; youtube?: string; count?: string; error?: string };
+  searchParams: Promise<{ created?: string; updated?: string; deleted?: string; category?: string; edit?: string; youtube?: string; count?: string; error?: string }>;
 }
 
 interface ManualReviewListItem {
@@ -154,8 +154,9 @@ async function getPendingYouTubeImports(): Promise<YouTubeImportListItem[]> {
   }
 }
 
-export default async function ManualContentAdminPage({ searchParams }: AdminPageProps) {
-  const authenticated = isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+export default async function ManualContentAdminPage(props: AdminPageProps) {
+  const searchParams = await props.searchParams;
+  const authenticated = isAdminSessionValid((await cookies()).get(ADMIN_SESSION_COOKIE)?.value);
   const configured = isAdminConfigured();
   const emailLoginConfigured = isEmailLoginConfigured();
   const errorMessage = searchParams.error ? errorMessages[searchParams.error] : null;

@@ -32,7 +32,7 @@ async function getManagedCategories(): Promise<ManagedCategory[]> {
 }
 
 export default async function CategoriesAdminPage() {
-  const authenticated = isAdminSessionValid(cookies().get(ADMIN_SESSION_COOKIE)?.value);
+  const authenticated = isAdminSessionValid((await cookies()).get(ADMIN_SESSION_COOKIE)?.value);
   if (!authenticated) {
     redirect("/admin/manual-content");
   }

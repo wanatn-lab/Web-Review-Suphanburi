@@ -4,6 +4,15 @@ export const HOME_LATEST_LIMIT = 12;
 export const MUST_VISIT_COLLECTION_LIMIT = 100;
 export const ADMIN_CANDIDATE_LIMIT = 500;
 
+export function shuffleItems<T>(items: readonly T[]): T[] {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 export function buildHomeReviewSections<T extends { id: string }>(
   reviews: T[],
   mustVisitReviews: T[],

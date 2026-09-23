@@ -7,6 +7,7 @@ import {
   HOME_FEATURED_LIMIT,
   HOME_LATEST_LIMIT,
   HOME_MUST_VISIT_LIMIT,
+  shuffleItems,
 } from "@/lib/must-visit";
 import ReviewCard from "@/components/review-card";
 import { MustVisitCard } from "@/components/must-visit-card";
@@ -24,21 +25,19 @@ export const metadata: Metadata = {
     "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok ครบทุกอำเภอ อัปเดตทุกสัปดาห์",
 };
 
-// สำคัญ: หน้านี้เป็น Server Component ไม่มี dynamic API (cookies/headers/searchParams)
-// เลย Next.js จะ prerender เป็นไฟล์ static ตอน build ครั้งเดียวแล้วใช้ซ้ำตลอด
-// (ตอนนั้นตาราง reviews ยังว่างอยู่ หน้าเว็บเลยค้างโชว์ "ยังไม่มีรีวิว" แม้จะเพิ่มข้อมูลใน
-// Supabase ไปแล้วก็ตาม) revalidate = 60 สั่งให้ Next.js สร้างหน้าใหม่จาก Supabase
-// อัตโนมัติทุก 60 วินาที — เร็วเหมือน static เดิม แต่ข้อมูลไม่ค้าง
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const reviewFetchLimit = HOME_MUST_VISIT_LIMIT + HOME_FEATURED_LIMIT + HOME_LATEST_LIMIT;
   const [reviews, categories, mustVisitReviews] = await Promise.all([
-    getAllReviews(reviewFetchLimit),
+    getAllReviews(),
     getCategories(),
     getMustVisitReviews(HOME_MUST_VISIT_LIMIT),
   ]);
-  const { featuredReviews, latestReviews } = buildHomeReviewSections(reviews, mustVisitReviews);
+  const { featuredReviews } = buildHomeReviewSections(reviews, mustVisitReviews);
+  const featuredIds = new Set(featuredReviews.map((review) => review.id));
+  const recommendationPool = reviews.filter((review) => !featuredIds.has(review.id));
+  const recommendedReviews = shuffleItems(recommendationPool.length > 0 ? recommendationPool : reviews)
+    .slice(0, HOME_LATEST_LIMIT);
 
   return (
     <main>
@@ -109,17 +108,17 @@ export default async function HomePage() {
       </section>
 
       {featuredReviews.length > 0 && (
-        <section className="bg-[#FFF8F5] px-4 py-10 sm:px-8 sm:py-12">
+        <section className="bg-[#FFF8F5] px-4 py-10 dark:bg-neutral-900 sm:px-8 sm:py-12">
           <div className="mx-auto max-w-6xl">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <span className="text-xs font-extrabold tracking-[0.12em] text-[#B62F08]">WATCH &amp; GO</span>
-                <h2 className="font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900 sm:text-3xl">วิดีโอแนะนำ</h2>
-                <p className="mt-1 text-sm text-neutral-600">คลิปคัดมาให้ดูง่าย พร้อมเปิดพิกัดร้านและที่เที่ยวได้ทันที</p>
+                <span className="text-xs font-extrabold tracking-[0.12em] text-[#B62F08] dark:text-orange-300">WATCH &amp; GO</span>
+                <h2 className="font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900 dark:text-neutral-50 sm:text-3xl">ฟีดวิดีโอรีวิวล่าสุด</h2>
+                <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">คลิปคัดมาให้ดูง่าย พร้อมเปิดพิกัดร้านและที่เที่ยวได้ทันที</p>
               </div>
-              <a href="#latest-videos" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold text-[#B62F08] underline underline-offset-4 transition hover:bg-white hover:text-[#7E260C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08]">
+              <Link href="/latest-videos" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold text-[#B62F08] underline underline-offset-4 transition hover:bg-white hover:text-[#7E260C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08]">
                 ดูวิดีโอล่าสุด
-              </a>
+              </Link>
             </div>
             <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible lg:grid-cols-5">
               {featuredReviews.map((review) => (
@@ -132,16 +131,17 @@ export default async function HomePage() {
 
       <section id="latest-videos" className="px-4 py-10 sm:px-8 sm:py-12">
         <div className="mx-auto max-w-6xl">
-          <h2 className="mb-5 font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900">ฟีดวิดีโอรีวิวล่าสุด</h2>
-          {latestReviews.length > 0 ? (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-[family-name:var(--font-kanit)] text-2xl font-extrabold text-neutral-900 dark:text-neutral-50">วิดีโอแนะนำ</h2>
+            <Link href="/featured-videos" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold text-[#B62F08] underline underline-offset-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B62F08]">
+              ดูทั้งหมด
+            </Link>
+          </div>
+          {recommendedReviews.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {latestReviews.map((review) => (
+              {recommendedReviews.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
-            </div>
-          ) : reviews.length > 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
-              รีวิวล่าสุดทั้งหมดแสดงอยู่ในส่วนแนะนำด้านบนแล้ว
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">

@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { isSupabaseConfigured, supabase } from "./supabase";
 
 export interface Category {
   slug: string;
@@ -32,6 +32,7 @@ export function defaultCategoryLabel(slug: string): string {
 const CATEGORY_COLUMNS = "slug, label, seo_title, seo_description, sort_order, is_active";
 
 export async function getCategories(): Promise<Category[]> {
+  if (!isSupabaseConfigured) return DEFAULT_CATEGORIES;
   const { data, error } = await supabase.from("categories").select(CATEGORY_COLUMNS)
     .eq("is_active", true).order("sort_order", { ascending: true }).order("label", { ascending: true });
   if (error) { console.error("[getCategories]:", error.message); return DEFAULT_CATEGORIES; }
@@ -40,6 +41,7 @@ export async function getCategories(): Promise<Category[]> {
 
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return null;
+  if (!isSupabaseConfigured) return DEFAULT_CATEGORIES.find((category) => category.slug === slug) ?? null;
   const { data, error } = await supabase.from("categories").select(CATEGORY_COLUMNS)
     .eq("slug", slug).eq("is_active", true).maybeSingle();
   if (error) {

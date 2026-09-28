@@ -5,6 +5,8 @@ import ReviewCard from "@/components/review-card";
 // app/search/page.tsx — ปลายทางของช่องค้นหาบน Home Page
 // ไม่ index หน้านี้ (กัน duplicate content จาก query string ต่างๆ)
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{ q?: string }>;
 }

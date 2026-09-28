@@ -3,9 +3,16 @@ import { resilientFetch } from "./supabase-fetch";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-if (!supabaseUrl || !supabaseAnonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — ตรวจสอบไฟล์ .env.local");
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false }, global: { fetch: resilientFetch } });
+// CI validates the application without production credentials. Keep module imports
+// safe there, while each data function below returns its normal fallback response.
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+export const supabase = createClient(
+  supabaseUrl ?? "https://placeholder.supabase.co",
+  supabaseAnonKey ?? "placeholder-anon-key",
+  { auth: { persistSession: false }, global: { fetch: resilientFetch } },
+);
 
 export interface Review {
   id: string; title: string; slug: string; description: string | null; category: string | null;
@@ -24,11 +31,16 @@ function toReview(row: ReviewRow): Review {
 }
 
 export async function getReviewBySlug(slug: string): Promise<Review | null> {
+  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("slug", slug).maybeSingle();
   if (error) { console.error(`[getReviewBySlug] slug="${slug}":`, error.message); return null; }
   return data ? toReview(data as unknown as ReviewRow) : null;
 }
 export async function getAllReviews(limit?: number, options: { failOnError?: boolean } = {}): Promise<Review[]> {
+  if (!isSupabaseConfigured) {
+    if (options.failOnError) throw new Error("Unable to load reviews for sitemap");
+    return [];
+  }
   const query = () => supabase.from("reviews").select(REVIEW_COLUMNS)
     .is("deleted_at", null).order("created_at", { ascending: false });
 
@@ -50,11 +62,13 @@ export async function getAllReviews(limit?: number, options: { failOnError?: boo
   return rows.map(toReview);
 }
 export async function getReviewsByCategory(category: string): Promise<Review[]> {
+  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null).eq("category", category).order("created_at", { ascending: false });
   if (error) { console.error(`[getReviewsByCategory] category="${category}":`, error.message); return []; }
   return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
 }
 export async function getMustVisitReviews(limit = 24): Promise<Review[]> {
+  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS)
     .is("deleted_at", null).eq("is_must_visit", true)
     .order("must_visit_order", { ascending: true, nullsFirst: false })
@@ -64,7 +78,7 @@ export async function getMustVisitReviews(limit = 24): Promise<Review[]> {
 }
 export async function searchReviews(query: string, limit = 24): Promise<Review[]> {
   const sanitized = query.trim().replace(/[,()]/g, "");
-  if (!sanitized) return [];
+  if (!sanitized || !isSupabaseConfigured) return [];
   const { data, error } = await supabase.from("reviews").select(REVIEW_COLUMNS).is("deleted_at", null)
     .or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`).order("created_at", { ascending: false }).limit(limit);
   if (error) { console.error(`[searchReviews] query="${sanitized}":`, error.message); return []; }

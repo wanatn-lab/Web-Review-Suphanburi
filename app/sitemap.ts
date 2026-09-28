@@ -9,6 +9,10 @@ import { getCategories } from "@/lib/categories";
 
 
 export const revalidate = 60;
+// The public data source is available at runtime in Vercel but deliberately
+// absent from GitHub's build job. Generate this metadata route at request time
+// so CI never publishes an empty sitemap or fails before deployment.
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [reviews, categories] = await Promise.all([getAllReviews(undefined, { failOnError: true }), getCategories()]);

@@ -52,6 +52,10 @@ function Thumb({ review }: { review: Review }) {
           fallbackSrc={review.cover_image}
           alt={review.title}
           fill
+          // A 16:9 YouTube source is cropped into this 9:16 card. Letting
+          // next/image first shrink it to the card width leaves too few pixels
+          // in the cropped area, especially on high-density screens.
+          unoptimized
           sizes="(min-width: 1280px) 276px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover transition duration-300 group-hover:scale-105"
         />

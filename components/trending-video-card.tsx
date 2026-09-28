@@ -56,6 +56,9 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           fallbackSrc={review.cover_image}
           alt={review.title}
           fill
+          // Preserve the original YouTube image before object-cover crops the
+          // landscape thumbnail into this portrait card.
+          unoptimized
           sizes="(min-width: 1280px) 218px, (min-width: 1024px) 20vw, (min-width: 640px) 33vw, 144px"
           className="object-cover transition duration-300 group-hover:scale-105"
         />

@@ -43,7 +43,7 @@ export function YouTubeThumbnail({
   const handleLoad = (image: HTMLImageElement) => {
     // YouTube can return a successful but tiny placeholder for maxresdefault.
     // Skip it while a larger fallback is still available.
-    if (unoptimized && image.naturalWidth < 640 && sourceIndex < candidates.length - 1) {
+    if (sourceIndex < candidates.length - 1 && ((unoptimized && image.naturalWidth < 640) || (sourceIndex < 2 && image.naturalWidth / image.naturalHeight < 1.5))) {
       advanceSource();
     }
   };

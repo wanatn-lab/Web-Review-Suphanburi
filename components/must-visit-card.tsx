@@ -47,7 +47,7 @@ function CategoryBadge({ review }: { review: Review }) {
   return <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-extrabold ${className}`}>{label}</span>;
 }
 
-function ReviewMedia({ review, className, priority = false }: { review: Review; className: string; priority?: boolean }) {
+function ReviewMedia({ review, className, priority = false, sizes = "(min-width: 1024px) 320px, (min-width: 640px) 33vw, 50vw" }: { review: Review; className: string; priority?: boolean; sizes?: string }) {
   const source = videoSource(review);
   const media = (
     <div className={`group relative overflow-hidden bg-[#2D160E] ${className}`}>
@@ -56,8 +56,8 @@ function ReviewMedia({ review, className, priority = false }: { review: Review; 
           src={review.cover_image}
           alt={review.title}
           fill
-          priority={priority}
-          sizes={priority ? "(min-width: 1024px) 42vw, 100vw" : "(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"}
+          preload={priority}
+          sizes={sizes}
           className="object-cover transition duration-300 group-hover:scale-[1.03]"
         />
       ) : (
@@ -118,7 +118,7 @@ export function MustVisitSpotlight({ review }: { review: Review }) {
     <article className="relative overflow-hidden rounded-3xl bg-[#2D160E] text-white shadow-xl shadow-[#7E260C]/15">
       <div aria-hidden="true" className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[#FFDD00]/15 blur-3xl" />
       <div className="relative grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <ReviewMedia review={review} priority className="aspect-[4/5] min-h-[22rem] lg:h-full lg:min-h-[32rem]" />
+        <ReviewMedia review={review} priority sizes="(min-width: 1024px) 460px, (min-width: 640px) calc(100vw - 64px), calc(100vw - 32px)" className="aspect-[4/5] min-h-[22rem] lg:h-full lg:min-h-[32rem]" />
         <div className="flex flex-col p-6 sm:p-8 lg:p-10">
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs font-extrabold tracking-[0.16em] text-[#FFDD00]">TOP PICK · 01</span>
@@ -143,11 +143,11 @@ export function MustVisitSpotlight({ review }: { review: Review }) {
   );
 }
 
-export function MustVisitCard({ review, rank, className = "" }: { review: Review; rank: number; className?: string }) {
+export function MustVisitCard({ review, rank, className = "", priority = false, sizes }: { review: Review; rank: number; className?: string; priority?: boolean; sizes?: string }) {
   return (
     <article className={`overflow-hidden rounded-2xl border border-[#F0D7CD] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${className}`}>
       <div className="relative">
-        <ReviewMedia review={review} className="aspect-[4/5]" />
+        <ReviewMedia review={review} priority={priority} sizes={sizes} className="aspect-[4/5]" />
         <span className="absolute left-3 top-3 rounded-full bg-[#2D160E]/90 px-2.5 py-1 text-xs font-extrabold text-white">#{String(rank).padStart(2, "0")}</span>
       </div>
       <div className="p-4">

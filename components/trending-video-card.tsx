@@ -53,10 +53,10 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
       {review.youtube_video_id ? (
         <YouTubeThumbnail
           videoId={review.youtube_video_id}
+          fallbackSrc={review.cover_image}
           alt={review.title}
           fill
-          unoptimized
-          sizes="(min-width: 1024px) 14rem, (min-width: 640px) 30vw, 9rem"
+          sizes="(min-width: 1280px) 218px, (min-width: 1024px) 20vw, (min-width: 640px) 33vw, 144px"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
       ) : review.cover_image ? (
@@ -64,7 +64,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           src={review.cover_image}
           alt={review.title}
           fill
-          sizes="(min-width: 1024px) 14rem, (min-width: 640px) 30vw, 9rem"
+          sizes="(min-width: 1280px) 218px, (min-width: 1024px) 20vw, (min-width: 640px) 33vw, 144px"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
       ) : (
@@ -109,7 +109,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
           </a>
         )}
         {label && <span className={`w-fit rounded px-1.5 py-0.5 text-[0.6rem] font-bold ${badgeClass}`}>{label}</span>}
-        <span className="line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white">{review.title}</span>
+        <Link href={`/reviews/${review.slug}`} className="pointer-events-auto line-clamp-2 text-[0.78rem] font-semibold leading-snug text-white underline-offset-2 hover:underline">{review.title}</Link>
       </div>
     </div>
   );

@@ -98,7 +98,7 @@ export default async function HomePage() {
           {mustVisitReviews.length > 0 ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
               {mustVisitReviews.map((review, index) => (
-                <MustVisitCard key={review.id} review={review} rank={index + 1} className="w-44 flex-none snap-start sm:w-52" />
+                <MustVisitCard key={review.id} review={review} rank={index + 1} priority={index === 0} sizes="(min-width: 640px) 208px, 176px" className="w-44 flex-none snap-start sm:w-52" />
               ))}
             </div>
           ) : (

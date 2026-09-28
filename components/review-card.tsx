@@ -10,7 +10,7 @@ import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
 import type { Review } from "@/lib/supabase";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
+import { SITE_URL } from "@/lib/site";
 
 function PlayBadge() {
   return (
@@ -52,8 +52,7 @@ function Thumb({ review }: { review: Review }) {
           fallbackSrc={review.cover_image}
           alt={review.title}
           fill
-          unoptimized
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          sizes="(min-width: 1280px) 276px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
       ) : review.cover_image ? (
@@ -61,7 +60,7 @@ function Thumb({ review }: { review: Review }) {
           src={review.cover_image}
           alt={review.title}
           fill
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          sizes="(min-width: 1280px) 276px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
       ) : (

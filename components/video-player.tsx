@@ -13,39 +13,8 @@ import { createPortal } from "react-dom";
 // ปิดได้ 3 ทาง: กดปุ่ม X, กดปุ่ม Escape, หรือคลิกพื้นหลังสีดำรอบวิดีโอ
 // ล็อกการเลื่อนหน้าเว็บด้านหลัง (body scroll) ไว้ตอนเปิดเต็มจอ
 
-export type VideoProvider = "facebook" | "tiktok" | "youtube";
-
-function youtubeVideoId(value: string): string | null {
-  try {
-    const url = new URL(value);
-    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
-    const candidate =
-      hostname === "youtu.be"
-        ? url.pathname.split("/").filter(Boolean)[0]
-        : hostname.endsWith("youtube.com")
-          ? url.searchParams.get("v") ?? url.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/)?.[1]
-          : null;
-    return candidate && /^[A-Za-z0-9_-]{11}$/.test(candidate) ? candidate : null;
-  } catch {
-    return null;
-  }
-}
-
-function buildEmbedSrc(provider: VideoProvider, url: string): string | null {
-  if (provider === "facebook") {
-    const encoded = encodeURIComponent(url);
-    return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&autoplay=true`;
-  }
-  if (provider === "youtube") {
-    const id = youtubeVideoId(url);
-    return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0` : null;
-  }
-  // TikTok: ดึง video id จาก URL แล้วต่อเป็น embed v2 (ไม่ต้องโหลด widget.js ที่หนัก)
-  const match = url.match(/video\/(\d+)/);
-  return match
-    ? `https://www.tiktok.com/player/v1/${match[1]}?autoplay=1&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=0&rel=0&native_context_menu=0`
-    : null;
-}
+import { videoEmbedUrl, type VideoProvider } from "@/lib/video-metadata";
+export type { VideoProvider } from "@/lib/video-metadata";
 
 function PlayGlyph({ className = "h-7 w-7 translate-x-[2px]" }: { className?: string }) {
   return (
@@ -77,7 +46,7 @@ export function VideoPlayer({
 }) {
   const [open, setOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const embedSrc = buildEmbedSrc(provider, url);
+  const embedSrc = videoEmbedUrl(provider, url, true);
   const isYouTube = provider === "youtube";
   const playerSize = isYouTube ? "aspect-video max-w-4xl" : "aspect-[9/16] max-w-sm sm:max-w-md";
 

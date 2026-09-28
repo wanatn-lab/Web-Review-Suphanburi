@@ -8,6 +8,7 @@ const nextConfig = {
     serverActions: { bodySizeLimit: "35mb" },
   },
   images: {
+    minimumCacheTTL: 86400,
     remotePatterns: [
       { protocol: "https", hostname: "scontent*.xx.fbcdn.net" },
       { protocol: "https", hostname: "*.fbcdn.net" },

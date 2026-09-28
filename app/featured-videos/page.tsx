@@ -5,6 +5,7 @@ import { getAllReviews } from "@/lib/supabase";
 import { shuffleItems } from "@/lib/must-visit";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/featured-videos" },
   title: "วิดีโอแนะนำทั้งหมด",
   description: "เลือกชมวิดีโอรีวิวสุพรรณบุรีทั้งหมด เรียงแบบสุ่ม",
 };

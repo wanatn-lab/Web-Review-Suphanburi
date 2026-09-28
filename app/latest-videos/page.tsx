@@ -3,6 +3,7 @@ import ReviewCard from "@/components/review-card";
 import { getAllReviews } from "@/lib/supabase";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/latest-videos" },
   title: "วิดีโอรีวิวล่าสุดทั้งหมด",
   description: "รวมวิดีโอรีวิวสุพรรณบุรีทั้งหมด เรียงตามวันที่เพิ่มเข้าระบบล่าสุด",
 };

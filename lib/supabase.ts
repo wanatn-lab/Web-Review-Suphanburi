@@ -28,13 +28,13 @@ export async function getReviewBySlug(slug: string): Promise<Review | null> {
   if (error) { console.error(`[getReviewBySlug] slug="${slug}":`, error.message); return null; }
   return data ? toReview(data as unknown as ReviewRow) : null;
 }
-export async function getAllReviews(limit?: number): Promise<Review[]> {
+export async function getAllReviews(limit?: number, options: { failOnError?: boolean } = {}): Promise<Review[]> {
   const query = () => supabase.from("reviews").select(REVIEW_COLUMNS)
     .is("deleted_at", null).order("created_at", { ascending: false });
 
   if (limit !== undefined) {
     const { data, error } = await query().limit(limit);
-    if (error) { console.error("[getAllReviews]:", error.message); return []; }
+    if (error) { console.error("[getAllReviews]:", error.message); if (options.failOnError) throw new Error("Unable to load reviews for sitemap"); return []; }
     return (data ?? []).map((row) => toReview(row as unknown as ReviewRow));
   }
 
@@ -42,7 +42,7 @@ export async function getAllReviews(limit?: number): Promise<Review[]> {
   const rows: ReviewRow[] = [];
   for (let offset = 0; ; offset += pageSize) {
     const { data, error } = await query().range(offset, offset + pageSize - 1);
-    if (error) { console.error("[getAllReviews]:", error.message); return []; }
+    if (error) { console.error("[getAllReviews]:", error.message); if (options.failOnError) throw new Error("Unable to load reviews for sitemap"); return []; }
     const page = (data ?? []) as unknown as ReviewRow[];
     rows.push(...page);
     if (page.length < pageSize) break;

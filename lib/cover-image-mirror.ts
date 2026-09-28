@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 // lib/cover-image-mirror.ts
@@ -45,8 +46,7 @@ function isOwnStorageUrl(url: string): boolean {
  * ถ้ามิเรอร์ไม่ได้ (ด้วยเหตุผลใดก็ตาม) จะคืน `sourceUrl` เดิมกลับไปเสมอ — ไม่ throw
  *
  * @param sourceUrl URL ภาพต้นทาง (หรือ null ถ้าไม่มีภาพ)
- * @param slug      slug ของรีวิว ใช้เป็นชื่อไฟล์ถาวร (1 รีวิว = 1 ไฟล์ภาพปก, upsert
- *                  ทับของเดิมได้เวลาแก้ไขรีวิวแล้วเปลี่ยนภาพ)
+ * @param slug      slug ของรีวิว ใช้ร่วมกับ hash ของรูปเป็นชื่อไฟล์ถาวร
  */
 export async function mirrorCoverImage(sourceUrl: string | null, slug: string): Promise<string | null> {
   if (!sourceUrl) return sourceUrl;
@@ -80,11 +80,14 @@ export async function mirrorCoverImage(sourceUrl: string | null, slug: string): 
       return sourceUrl;
     }
 
-    const path = `covers/${slug}.${extension}`;
+    // An edited cover gets a new URL, so long-lived image/CDN caches cannot
+    // keep showing the previous cover after an editor replaces it.
+    const digest = createHash("sha256").update(Buffer.from(arrayBuffer)).digest("hex").slice(0, 16);
+    const path = `covers/${slug}-${digest}.${extension}`;
     const supabaseAdmin = getSupabaseAdmin();
     const { error: uploadError } = await supabaseAdmin.storage
       .from(COVER_IMAGE_BUCKET)
-      .upload(path, arrayBuffer, { contentType, upsert: true });
+      .upload(path, arrayBuffer, { contentType, cacheControl: "31536000", upsert: true });
 
     if (uploadError) {
       console.warn(`[cover-image-mirror] อัปโหลดขึ้น Supabase Storage ไม่สำเร็จ: ${uploadError.message}`);

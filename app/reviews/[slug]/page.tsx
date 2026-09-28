@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { reviewVideo } from "@/lib/video-metadata";
+import { SITE_URL } from "@/lib/site";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getReviewBySlug, getReviewsByCategory } from "@/lib/supabase";
@@ -17,7 +19,6 @@ import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 // Next.js 15+ passes `params` as a Promise; this route awaits it before
 // reading the slug so it remains compatible with Next.js 16.
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 
 function seoKeywordSuffix(category: string | null): string {
@@ -166,7 +167,7 @@ export default async function ReviewDetailPage(props: PageProps) {
         : review.category === "stay"
           ? "LodgingBusiness"
           : review.category === "market"
-            ? "ShoppingCenter"
+            ? "Place"
             : review.category === "trip"
               ? "TouristAttraction"
               : review.category === "temple"
@@ -208,8 +209,8 @@ export default async function ReviewDetailPage(props: PageProps) {
     datePublished: review.created_at,
     dateModified: review.updated_at,
     inLanguage: "th-TH",
-    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
-    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: SITE_NAME, url: `${SITE_URL}/about` },
+    publisher: { "@id": `${SITE_URL}/#organization` },
     about: { "@id": placeId },
   };
   const jsonLd = { "@context": "https://schema.org", "@graph": [articleSchema, placeSchema] };
@@ -257,6 +258,7 @@ export default async function ReviewDetailPage(props: PageProps) {
                 description={review.description}
                 mapsUrl={directionsUrl}
               />
+              {reviewVideo(review) && <Link href={`/watch/${review.slug}`} className="mt-3 inline-flex min-h-11 items-center font-bold text-[#B62F08] underline underline-offset-4">เปิดหน้าชมวิดีโอ {review.title}</Link>}
             </div>
           )}
 
@@ -274,6 +276,7 @@ export default async function ReviewDetailPage(props: PageProps) {
             <h1 className="max-w-[26ch] text-2xl font-extrabold leading-snug text-neutral-900 dark:text-neutral-50 sm:text-3xl">
               {review.title}
             </h1>
+            <Link href="/about" rel="author" className="text-sm font-semibold text-[#B62F08]">โดย รีวิวสุพรรณบุรี</Link>
             <time dateTime={review.created_at} className="text-xs text-neutral-400">
               {new Date(review.created_at).toLocaleDateString("th-TH", {
                 day: "numeric",

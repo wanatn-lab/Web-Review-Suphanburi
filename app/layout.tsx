@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL, SOCIAL_LINKS } from "@/lib/site";
 import { Kanit, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
 import { getCategories } from "@/lib/categories";
@@ -11,20 +12,20 @@ import "./globals.css";
 // than a <link> to Google Fonts), and site-wide default metadata.
 
 const kanit = Kanit({
-  subsets: ["thai", "latin"],
+  subsets: ["thai"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-kanit",
+  preload: false,
   display: "swap",
 });
 
 const notoSansThai = Noto_Sans_Thai({
-  subsets: ["thai", "latin"],
+  subsets: ["thai"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-noto-sans-thai",
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://reviewsuphanburi.com";
 
 const SITE_NAME = "รีวิวสุพรรณบุรี";
 const SITE_DESCRIPTION = "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok อัปเดตทุกสัปดาห์";
@@ -72,12 +73,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     "@graph": [
       {
         "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        sameAs: Object.values(SOCIAL_LINKS),
+        telephone: "+66855298799",
+        description: SITE_DESCRIPTION,
         name: SITE_NAME,
         url: SITE_URL,
         areaServed: { "@type": "AdministrativeArea", name: "จังหวัดสุพรรณบุรี" },
       },
       {
         "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        publisher: { "@id": `${SITE_URL}/#organization` },
         name: SITE_NAME,
         url: SITE_URL,
         inLanguage: "th-TH",
@@ -92,7 +99,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="th" className={`${kanit.variable} ${notoSansThai.variable}`}>
       <body className="min-h-screen bg-white font-[family-name:var(--font-noto-sans-thai)] text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-50">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
         <header className="sticky top-0 z-20 bg-[#DA3D0D] text-white">
           <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 sm:px-8">
             <Link
@@ -167,6 +174,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 ติดต่อเรา
               </h2>
               <ul className="mt-3 flex flex-col gap-3 text-sm">
+                <li><Link href="/about" className="inline-flex min-h-11 items-center hover:text-white">เกี่ยวกับเรา</Link></li>
+                <li><Link href="/contact" className="inline-flex min-h-11 items-center hover:text-white">ติดต่อและแจ้งแก้ไขข้อมูล</Link></li>
                 <li>
                   <a
                     href="https://www.facebook.com/Reviewsuphan"

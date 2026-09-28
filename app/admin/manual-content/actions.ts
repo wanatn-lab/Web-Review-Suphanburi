@@ -598,6 +598,7 @@ export async function createManualReview(formData: FormData) {
   revalidatePath(`/category/${categoryConfig.slug}`);
   revalidatePath(`/reviews/${inserted.slug}`);
   revalidatePath("/sitemap.xml");
+  revalidatePath("/video-sitemap.xml");
 
   redirect(`${ADMIN_PATH}?created=${encodeURIComponent(inserted.slug)}`);
 }
@@ -707,6 +708,7 @@ export async function publishYouTubeImport(formData: FormData) {
   revalidatePath(`/category/${categoryConfig.slug}`);
   revalidatePath(`/reviews/${inserted.slug}`);
   revalidatePath("/sitemap.xml");
+  revalidatePath("/video-sitemap.xml");
   revalidatePath(ADMIN_PATH);
   redirect(`${ADMIN_PATH}?youtube=published`);
 }
@@ -812,7 +814,9 @@ export async function updateManualReview(formData: FormData) {
   revalidatePath("/");
   revalidatePath(`/category/${categoryConfig.slug}`);
   revalidatePath(`/reviews/${originalSlug}`);
+  revalidatePath(`/watch/${originalSlug}`);
   revalidatePath("/sitemap.xml");
+  revalidatePath("/video-sitemap.xml");
 
   redirect(`${ADMIN_PATH}?updated=${encodeURIComponent(originalSlug)}`);
 }
@@ -860,6 +864,7 @@ export async function saveCategory(formData: FormData) {
   revalidatePath("/");
   revalidatePath(`/category/${slug}`);
   revalidatePath("/sitemap.xml");
+  revalidatePath("/video-sitemap.xml");
   revalidatePath(ADMIN_PATH);
   revalidatePath(CATEGORY_ADMIN_PATH);
   redirect(`${CATEGORY_ADMIN_PATH}?category=saved`);
@@ -905,7 +910,9 @@ export async function deleteManualReview(formData: FormData) {
   revalidatePath("/");
   if (existing.category) revalidatePath(`/category/${existing.category}`);
   revalidatePath(`/reviews/${originalSlug}`);
+  revalidatePath(`/watch/${originalSlug}`);
   revalidatePath("/sitemap.xml");
+  revalidatePath("/video-sitemap.xml");
 
   redirect(`${ADMIN_PATH}?deleted=${encodeURIComponent(originalSlug)}`);
 }

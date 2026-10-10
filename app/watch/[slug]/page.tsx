@@ -11,11 +11,19 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const review = await getReviewBySlug((await params).slug);
   if (!review || !reviewVideo(review)) return { title: "ไม่พบวิดีโอ", robots: { index: false } };
+  const title = `ชมวิดีโอ ${review.title}`;
+  const description = buildMetaDescription(review.description || `วิดีโอรีวิว ${review.title}`, "วิดีโอรีวิวสุพรรณบุรี", 155);
+  // openGraph/twitter titles bypass title.template, so add the site name here.
+  const socialTitle = `${title} | รีวิวสุพรรณบุรี`;
+  const images = review.cover_image ? [review.cover_image] : [];
   return {
-    title: `ชมวิดีโอ ${review.title}`,
-    description: buildMetaDescription(review.description || `วิดีโอรีวิว ${review.title}`, "วิดีโอรีวิวสุพรรณบุรี", 155),
+    title,
+    description,
     alternates: { canonical: `/watch/${review.slug}` },
-    openGraph: { type: "video.other", url: `/watch/${review.slug}`, images: review.cover_image ? [review.cover_image] : [] },
+    openGraph: { type: "video.other", url: `/watch/${review.slug}`, title: socialTitle, description, images },
+    // Twitter metadata is not inherited per-field from the root layout, so set
+    // it explicitly; otherwise X/Twitter shows the site-wide generic text.
+    twitter: { card: review.cover_image ? "summary_large_image" : "summary", title: socialTitle, description, images },
   };
 }
 

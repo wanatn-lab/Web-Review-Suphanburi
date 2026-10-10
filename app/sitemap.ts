@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { reviewVideo } from "@/lib/video-metadata";
 import { SITE_URL } from "@/lib/site";
 import { getAllReviews } from "@/lib/supabase";
 import { getCategories } from "@/lib/categories";
@@ -8,6 +7,8 @@ import { getCategories } from "@/lib/categories";
 // ดึงรีวิวทั้งหมดจาก Supabase มาขึ้น sitemap อัตโนมัติ ไม่ต้องอัปเดตมือ
 
 
+// /watch/* video landing pages are intentionally NOT listed here; they are
+// submitted only via /video-sitemap.xml to avoid doubling the crawl queue.
 export const revalidate = 60;
 // The public data source is available at runtime in Vercel but deliberately
 // absent from GitHub's build job. Generate this metadata route at request time
@@ -35,9 +36,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/must-visit-suphanburi`, changeFrequency: "weekly", priority: 0.9 },
     ...["/about", "/contact", "/latest-videos", "/featured-videos"].map((path) => ({ url: `${SITE_URL}${path}` })),
   ];
-  const watchEntries: MetadataRoute.Sitemap = reviews.filter((review) => reviewVideo(review)).map((review) => ({
-    url: `${SITE_URL}/watch/${encodeURIComponent(review.slug)}`,
-    lastModified: review.updated_at,
-  }));
-  return [...staticEntries, ...categoryEntries, ...reviewEntries, ...watchEntries];
+  return [...staticEntries, ...categoryEntries, ...reviewEntries];
 }

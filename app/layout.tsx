@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { AnalyticsConsent } from "@/components/analytics-consent";
 import { SITE_URL, SOCIAL_LINKS } from "@/lib/site";
 import { Kanit, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
@@ -223,6 +225,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             © {new Date().getFullYear() + 543} รีวิวสุพรรณบุรี
           </div>
         </footer>
+        <Analytics />
+        <AnalyticsConsent />
       </body>
     </html>
   );

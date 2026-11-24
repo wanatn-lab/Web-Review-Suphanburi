@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SITE_URL, SITE_NAME, SOCIAL_LINKS } from "@/lib/site";
+import { SAME_AS_LINKS, SITE_ALTERNATE_NAMES, SITE_URL, SITE_NAME, SOCIAL_LINKS } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "เกี่ยวกับรีวิวสุพรรณบุรี",
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  const schema = { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE_URL}/about`, name: "เกี่ยวกับรีวิวสุพรรณบุรี", mainEntity: { "@id": `${SITE_URL}/#organization`, "@type": "Organization", name: SITE_NAME, sameAs: Object.values(SOCIAL_LINKS) } };
+  const schema = { "@context": "https://schema.org", "@type": "AboutPage", url: `${SITE_URL}/about`, name: "เกี่ยวกับรีวิวสุพรรณบุรี", mainEntity: { "@id": `${SITE_URL}/#organization`, "@type": "Organization", name: SITE_NAME, alternateName: SITE_ALTERNATE_NAMES, sameAs: SAME_AS_LINKS } };
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />

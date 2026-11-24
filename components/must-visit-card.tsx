@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
-import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import type { Review } from "@/lib/supabase";
 import PinIcon from "@/components/pin-icon";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
+import { reviewMapsUrl } from "@/lib/maps-link";
 
 function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
   if (review.facebook_embed_url) return { provider: "facebook", url: review.facebook_embed_url };
@@ -16,12 +16,7 @@ function videoSource(review: Review): { provider: VideoProvider; url: string } |
 }
 
 function getMapsUrl(review: Review) {
-  if (isSuphanBuriCoordinate(review.latitude, review.longitude)) {
-    return `https://www.google.com/maps/search/?api=1&query=${review.latitude},${review.longitude}`;
-  }
-  return review.location_text
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
-    : null;
+  return reviewMapsUrl(review);
 }
 
 function PlayIcon({ className = "h-5 w-5 translate-x-px" }: { className?: string }) {

@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { CATEGORY_BADGE_CLASS, defaultCategoryLabel } from "@/lib/categories";
 import type { Review } from "@/lib/supabase";
-import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
 import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
+import { reviewMapsUrl } from "@/lib/maps-link";
 
 function videoSource(review: Review): { provider: VideoProvider; url: string } | null {
   if (review.facebook_embed_url) return { provider: "facebook", url: review.facebook_embed_url };
@@ -41,12 +41,7 @@ export default function TrendingVideoCard({ review, className = "" }: { review: 
     ? CATEGORY_BADGE_CLASS[review.category] ?? "bg-neutral-100 text-neutral-600"
     : "bg-neutral-100 text-neutral-600";
   const label = review.category ? review.category_label ?? defaultCategoryLabel(review.category) : null;
-  const hasCoordinates = isSuphanBuriCoordinate(review.latitude, review.longitude);
-  const mapsUrl = hasCoordinates
-    ? `https://www.google.com/maps/search/?api=1&query=${review.latitude},${review.longitude}`
-    : review.location_text
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
-      : null;
+  const mapsUrl = reviewMapsUrl(review);
 
   const cover = (
     <div className="relative aspect-[9/16] w-full overflow-hidden bg-neutral-100 text-left dark:bg-neutral-800">

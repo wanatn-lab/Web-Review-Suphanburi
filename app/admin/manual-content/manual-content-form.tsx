@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LocationPicker } from "./location-picker";
+import type { SelectedMapLocation } from "./actions";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createManualReview,
@@ -29,6 +30,7 @@ interface FormValues {
 
 export interface EditableManualReview extends FormValues {
   slug: string;
+  initialLocation?: SelectedMapLocation | null;
 }
 
 interface ManualContentFormProps {
@@ -380,6 +382,7 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
           value={values.address}
           onChange={(address) => updateValue("address", address)}
           inputClass={inputClass}
+          initialSelection={initialReview?.initialLocation ?? null}
         />
 
         <button type="submit" className="w-full rounded-xl bg-[#DA3D0D] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]">

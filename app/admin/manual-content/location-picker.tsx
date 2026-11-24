@@ -12,13 +12,18 @@ export function LocationPicker({
   value,
   onChange,
   inputClass,
+  initialSelection = null,
 }: {
   value: string;
   onChange: (value: string) => void;
   inputClass: string;
+  initialSelection?: SelectedMapLocation | null;
 }) {
   const [results, setResults] = useState<MapLocationResult[]>([]);
-  const [selected, setSelected] = useState<SelectedMapLocation | null>(null);
+  const [selected, setSelected] = useState<SelectedMapLocation | null>(initialSelection);
+  // A pick only applies while the address box still shows that pick's label,
+  // e.g. an imported draft that replaces the address also drops the old pin.
+  const activeSelection = selected && selected.label === value ? selected : null;
   const [notice, setNotice] = useState("");
   const [isPending, startTransition] = useTransition();
   const suppressNextSearch = useRef(false);
@@ -101,8 +106,9 @@ export function LocationPicker({
           {isPending ? "กำลังค้นหา…" : "ค้นหา"}
         </button>
       </div>
-      <input type="hidden" name="latitude" value={selected?.latitude ?? ""} />
-      <input type="hidden" name="longitude" value={selected?.longitude ?? ""} />
+      <input type="hidden" name="latitude" value={activeSelection?.latitude ?? ""} />
+      <input type="hidden" name="longitude" value={activeSelection?.longitude ?? ""} />
+      <input type="hidden" name="google_place_id" value={activeSelection?.placeId ?? ""} />
       <p className="mt-1 text-xs text-neutral-500">พิมพ์ชื่อร้าน ระบบจะแนะนำสถานที่จาก Google Maps ให้เลือกโดยอัตโนมัติ</p>
       {notice && <p className="mt-2 text-xs text-neutral-600">{notice}</p>}
       {results.length > 0 && (

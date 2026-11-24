@@ -8,9 +8,9 @@ import ShareButton from "@/components/share-button";
 import { VideoPlayer, type VideoProvider } from "@/components/video-player";
 import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
 import type { Review } from "@/lib/supabase";
-import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 
 import { SITE_URL } from "@/lib/site";
+import { reviewMapsUrl } from "@/lib/maps-link";
 
 function PlayBadge() {
   return (
@@ -99,12 +99,7 @@ export default function ReviewCard({
   const label = review.category ? review.category_label ?? defaultCategoryLabel(review.category) : null;
   const href = `/reviews/${review.slug}`;
   const canonicalUrl = `${SITE_URL}${href}`;
-  const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
-  const mapsUrl = hasGeo
-    ? `https://maps.google.com/?q=${review.latitude},${review.longitude}`
-    : review.location_text
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
-      : null;
+  const mapsUrl = reviewMapsUrl(review);
   const video = videoSource(review);
   const cardDescription = review.description ? compactText(review.description) : null;
 

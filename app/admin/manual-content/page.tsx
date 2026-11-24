@@ -10,6 +10,7 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { YouTubeThumbnail } from "@/components/youtube-thumbnail";
 import { loginAdmin, loginAdminWithEmail, logoutAdmin, publishYouTubeImport, rejectYouTubeImport, syncYouTubeNow } from "./actions";
+import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import { ManualContentForm, type ContentCategory, type EditableManualReview } from "./manual-content-form";
 import { DeleteReviewButton } from "./delete-review-button";
 
@@ -72,7 +73,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
   // ต้องแก้ไขได้จากหน้านี้เช่นกัน ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง (source: "manual")
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
-    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, location_text")
+    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, location_text, latitude, longitude, google_place_id")
     .is("deleted_at", null)
     .eq("slug", slug)
     .maybeSingle();
@@ -90,6 +91,11 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
     referenceUrl: data.tiktok_embed_url ?? data.youtube_embed_url ?? data.facebook_embed_url ?? "",
     imageUrl: data.cover_image ?? "",
     address: data.location_text ?? "สุพรรณบุรี",
+    // Keep the saved pin (and Place ID) when the editor does not change the location.
+    initialLocation:
+      data.location_text && isSuphanBuriCoordinate(data.latitude, data.longitude)
+        ? { label: data.location_text, latitude: data.latitude, longitude: data.longitude, placeId: data.google_place_id ?? null }
+        : null,
   };
   } catch (error) {
     console.error("[manual-content] Failed to load review for editing:", error);

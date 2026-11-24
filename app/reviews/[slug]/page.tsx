@@ -9,6 +9,7 @@ import { VideoPlayer } from "@/components/video-player";
 import ReviewCard from "@/components/review-card";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
+import { reviewMapsUrl } from "@/lib/maps-link";
 
 // app/reviews/[slug]/page.tsx
 // Review Detail Page — Server Component (SSR), Dynamic Route.
@@ -150,11 +151,8 @@ export default async function ReviewDetailPage(props: PageProps) {
 
   // Use a direct Maps link instead of an embedded map. It gives the reader a
   // clear next action and avoids repeating a long address inside the article.
-  const directionsUrl = hasGeo
-    ? `https://maps.google.com/?q=${review.latitude},${review.longitude}`
-    : review.location_text
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(review.location_text)}`
-      : null;
+  // With a stored Google Place ID this opens the venue's own Maps page.
+  const directionsUrl = reviewMapsUrl(review);
 
   // Use the most specific place type the visible category supports.  A temple,
   // market, or attraction is not a LocalBusiness, and misleading markup is

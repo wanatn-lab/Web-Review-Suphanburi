@@ -23,6 +23,7 @@ import { buildTitleFromCaption, guessCategory } from "@/lib/facebook-sync";
 import { extractLocationFromCaption } from "@/lib/geocoding";
 import { syncYouTubeImports } from "@/lib/youtube-import-sync";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
+import { isValidPlaceId } from "@/lib/maps-link";
 
 const ADMIN_PATH = "/admin/manual-content";
 const CATEGORY_ADMIN_PATH = "/admin/categories";
@@ -61,6 +62,8 @@ export interface SelectedMapLocation {
   label: string;
   latitude: number;
   longitude: number;
+  /** Google Maps Place ID; lets public "open in Maps" links open the venue page. */
+  placeId: string | null;
 }
 
 export type MapLocationSearchState =
@@ -184,6 +187,7 @@ export async function getMapLocationDetails(placeId: string): Promise<SelectedMa
       label: payload.formattedAddress,
       latitude: latitude as number,
       longitude: longitude as number,
+      placeId,
     };
   } catch (error) {
     console.error("[manual-content] Place Details threw:", error);
@@ -206,6 +210,13 @@ function readSelectedCoordinates(formData: FormData): { lat: number; lng: number
     return undefined;
   }
   return { lat, lng };
+}
+
+/** Place ID chosen in the location picker; null when none was selected. */
+function readSelectedPlaceId(formData: FormData): string | null {
+  const value = formData.get("google_place_id");
+  const placeId = typeof value === "string" ? value.trim() : "";
+  return isValidPlaceId(placeId) ? placeId : null;
 }
 
 function readRequiredText(formData: FormData, key: string, maxLength: number): string | null {
@@ -520,6 +531,7 @@ export async function createManualReview(formData: FormData) {
   const referenceUrl = readOptionalUrl(formData, "reference_url");
   const imageUrl = readOptionalUrl(formData, "image_url");
   const selectedCoordinates = readSelectedCoordinates(formData);
+  const selectedPlaceId = selectedCoordinates ? readSelectedPlaceId(formData) : null;
 
   if (
     selectedCoordinates === undefined ||
@@ -581,6 +593,7 @@ export async function createManualReview(formData: FormData) {
       latitude: coordinates?.lat ?? null,
       longitude: coordinates?.lng ?? null,
       location_text: address,
+      google_place_id: selectedPlaceId,
       facebook_post_id: null,
       youtube_video_id: null,
       source: "manual",
@@ -755,6 +768,9 @@ export async function updateManualReview(formData: FormData) {
   const referenceUrl = readOptionalUrl(formData, "reference_url");
   const imageUrl = readOptionalUrl(formData, "image_url");
   const selectedCoordinates = readSelectedCoordinates(formData);
+  // A Place ID only counts together with the coordinates of the same pick;
+  // typing a new address clears both in the picker, so the old ID is dropped.
+  const selectedPlaceId = selectedCoordinates ? readSelectedPlaceId(formData) : null;
 
   if (
     selectedCoordinates === undefined ||
@@ -800,6 +816,7 @@ export async function updateManualReview(formData: FormData) {
       latitude: coordinates?.lat ?? null,
       longitude: coordinates?.lng ?? null,
       location_text: address,
+      google_place_id: selectedPlaceId,
     })
     .eq("slug", originalSlug)
     .is("deleted_at", null)

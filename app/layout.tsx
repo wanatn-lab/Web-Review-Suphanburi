@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { AnalyticsConsent } from "@/components/analytics-consent";
-import { SITE_URL, SOCIAL_LINKS } from "@/lib/site";
+import { SAME_AS_LINKS, SITE_ALTERNATE_NAMES, SITE_URL } from "@/lib/site";
 import { Kanit, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
 import { getCategories } from "@/lib/categories";
@@ -45,7 +45,7 @@ const NAVIGATION_CATEGORIES = [
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "รีวิวสุพรรณบุรี | รวมร้านอาหาร คาเฟ่ ที่เที่ยว อัปเดตล่าสุด",
+    default: "รีวิวสุพรรณบุรี (Review Suphan) | รวมร้านอาหาร คาเฟ่ ที่เที่ยว",
     template: "%s | รีวิวสุพรรณบุรี",
   },
   description: SITE_DESCRIPTION,
@@ -54,12 +54,12 @@ export const metadata: Metadata = {
     locale: "th_TH",
     type: "website",
     url: "/",
-    title: "รีวิวสุพรรณบุรี | รวมร้านอาหาร คาเฟ่ ที่เที่ยว อัปเดตล่าสุด",
+    title: "รีวิวสุพรรณบุรี (Review Suphan) | รวมร้านอาหาร คาเฟ่ ที่เที่ยว",
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "รีวิวสุพรรณบุรี | รวมร้านอาหาร คาเฟ่ ที่เที่ยว อัปเดตล่าสุด",
+    title: "รีวิวสุพรรณบุรี (Review Suphan) | รวมร้านอาหาร คาเฟ่ ที่เที่ยว",
     description: SITE_DESCRIPTION,
   },
 };
@@ -76,7 +76,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {
         "@type": "Organization",
         "@id": `${SITE_URL}/#organization`,
-        sameAs: Object.values(SOCIAL_LINKS),
+        sameAs: SAME_AS_LINKS,
+        alternateName: SITE_ALTERNATE_NAMES,
         telephone: "+66855298799",
         description: SITE_DESCRIPTION,
         name: SITE_NAME,
@@ -88,6 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         "@id": `${SITE_URL}/#website`,
         publisher: { "@id": `${SITE_URL}/#organization` },
         name: SITE_NAME,
+        alternateName: SITE_ALTERNATE_NAMES,
         url: SITE_URL,
         inLanguage: "th-TH",
         potentialAction: {

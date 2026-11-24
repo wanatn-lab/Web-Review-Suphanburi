@@ -20,7 +20,8 @@ import TrendingVideoCard from "@/components/trending-video-card";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  title: "รวมรีวิวสุพรรณบุรี ที่เที่ยว ร้านอาหาร อัปเดตล่าสุด",
+  // absolute: skip the "%s | รีวิวสุพรรณบุรี" template (brand already in title).
+  title: { absolute: "รีวิวสุพรรณบุรี (Review Suphan) | รวมร้านอาหาร คาเฟ่ ที่เที่ยว" },
   description:
     "รวมรีวิวร้านอาหารสุพรรณบุรี ที่เที่ยวสุพรรณบุรี คาเฟ่ และที่พัก จากคลิปวิดีโอ Facebook และ TikTok ครบทุกอำเภอ อัปเดตทุกสัปดาห์",
 };

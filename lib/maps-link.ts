@@ -1,3 +1,4 @@
+import { isGoogleMapsLink } from "./google-maps-link";
 import { isSuphanBuriCoordinate } from "./location-validation";
 
 // lib/maps-link.ts
@@ -12,6 +13,7 @@ type MappableReview = {
   longitude: number | null;
   location_text: string | null;
   google_place_id?: string | null;
+  google_maps_url?: string | null;
 };
 
 const PLACE_ID_PATTERN = /^[A-Za-z0-9_-]{1,512}$/;
@@ -22,6 +24,8 @@ export function isValidPlaceId(value: unknown): value is string {
 }
 
 export function reviewMapsUrl(review: MappableReview): string | null {
+  // A link pasted from Google Maps "Share" already opens the venue page.
+  if (review.google_maps_url && isGoogleMapsLink(review.google_maps_url)) return review.google_maps_url;
   const hasGeo = isSuphanBuriCoordinate(review.latitude, review.longitude);
   const locationText = review.location_text?.trim() || null;
   const fallbackQuery = locationText ?? (hasGeo ? `${review.latitude},${review.longitude}` : null);

@@ -31,6 +31,7 @@ interface FormValues {
 export interface EditableManualReview extends FormValues {
   slug: string;
   initialLocation?: SelectedMapLocation | null;
+  initialMapsUrl?: string;
 }
 
 interface ManualContentFormProps {
@@ -383,6 +384,7 @@ export function ManualContentForm({ initialReview, categories }: ManualContentFo
           onChange={(address) => updateValue("address", address)}
           inputClass={inputClass}
           initialSelection={initialReview?.initialLocation ?? null}
+          initialMapsUrl={initialReview?.initialMapsUrl ?? ""}
         />
 
         <button type="submit" className="w-full rounded-xl bg-[#DA3D0D] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#B62F08]">

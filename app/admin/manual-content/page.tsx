@@ -73,7 +73,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
   // ต้องแก้ไขได้จากหน้านี้เช่นกัน ไม่ใช่แค่รายการที่พิมพ์เพิ่มเอง (source: "manual")
   const { data, error } = await getSupabaseAdmin()
     .from("reviews")
-    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, location_text, latitude, longitude, google_place_id")
+    .select("slug, title, description, category, cover_image, facebook_embed_url, tiktok_embed_url, youtube_embed_url, location_text, latitude, longitude, google_place_id, google_maps_url")
     .is("deleted_at", null)
     .eq("slug", slug)
     .maybeSingle();
@@ -92,6 +92,7 @@ async function getManualReview(slug: string): Promise<EditableManualReview | nul
     imageUrl: data.cover_image ?? "",
     address: data.location_text ?? "สุพรรณบุรี",
     // Keep the saved pin (and Place ID) when the editor does not change the location.
+    initialMapsUrl: data.google_maps_url ?? "",
     initialLocation:
       data.location_text && isSuphanBuriCoordinate(data.latitude, data.longitude)
         ? { label: data.location_text, latitude: data.latitude, longitude: data.longitude, placeId: data.google_place_id ?? null }

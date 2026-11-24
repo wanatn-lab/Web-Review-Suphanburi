@@ -24,6 +24,7 @@ import { extractLocationFromCaption } from "@/lib/geocoding";
 import { syncYouTubeImports } from "@/lib/youtube-import-sync";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
 import { isValidPlaceId } from "@/lib/maps-link";
+import { expandGoogleMapsLink, isGoogleMapsLink, parseGoogleMapsUrl } from "@/lib/google-maps-link";
 
 const ADMIN_PATH = "/admin/manual-content";
 const CATEGORY_ADMIN_PATH = "/admin/categories";
@@ -193,6 +194,44 @@ export async function getMapLocationDetails(placeId: string): Promise<SelectedMa
     console.error("[manual-content] Place Details threw:", error);
     return { error: "เชื่อมต่อ Google Maps ไม่สำเร็จ กรุณาลองใหม่" };
   }
+}
+
+export interface ResolvedGoogleMapsLink {
+  name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/**
+ * Free alternative to the Places API: read the venue pin from a link copied
+ * via Google Maps "Share". No API key or billing account is used.
+ */
+export async function resolveGoogleMapsLink(rawLink: string): Promise<ResolvedGoogleMapsLink | { error: string }> {
+  if (!(await isAuthenticated())) {
+    return { error: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบผู้ดูแลอีกครั้ง" };
+  }
+  const link = rawLink.trim();
+  if (!isGoogleMapsLink(link)) {
+    return { error: "ลิงก์นี้ไม่ใช่ลิงก์ Google Maps (คัดลอกจากปุ่ม \"แชร์\" ในแอป Google Maps)" };
+  }
+
+  const fullUrl = await expandGoogleMapsLink(link);
+  if (!fullUrl) {
+    // The link itself is still saved and opens the venue page; only the pin is missing.
+    return { name: null, latitude: null, longitude: null };
+  }
+  const parsed = parseGoogleMapsUrl(fullUrl);
+  if (parsed.latitude !== null && parsed.longitude !== null && !isSuphanBuriCoordinate(parsed.latitude, parsed.longitude)) {
+    return { error: "สถานที่ในลิงก์นี้อยู่นอกจังหวัดสุพรรณบุรี" };
+  }
+  return parsed;
+}
+
+/** Google Maps link pasted by the editor; null when empty or not a Maps link. */
+function readGoogleMapsUrl(formData: FormData): string | null {
+  const value = formData.get("google_maps_url");
+  const link = typeof value === "string" ? value.trim() : "";
+  return link && isGoogleMapsLink(link) ? link : null;
 }
 
 function readSelectedCoordinates(formData: FormData): { lat: number; lng: number } | null | undefined {
@@ -594,6 +633,7 @@ export async function createManualReview(formData: FormData) {
       longitude: coordinates?.lng ?? null,
       location_text: address,
       google_place_id: selectedPlaceId,
+      google_maps_url: readGoogleMapsUrl(formData),
       facebook_post_id: null,
       youtube_video_id: null,
       source: "manual",
@@ -817,6 +857,7 @@ export async function updateManualReview(formData: FormData) {
       longitude: coordinates?.lng ?? null,
       location_text: address,
       google_place_id: selectedPlaceId,
+      google_maps_url: readGoogleMapsUrl(formData),
     })
     .eq("slug", originalSlug)
     .is("deleted_at", null)

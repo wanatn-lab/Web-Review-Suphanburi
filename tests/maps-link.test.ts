@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isValidPlaceId, reviewMapsUrl } from "../lib/maps-link";
+import { isValidPlaceId, reviewMapsUrl, venueMapUrl } from "../lib/maps-link";
 
 const base = { latitude: 14.4731, longitude: 100.1254, location_text: "21/9 ถนนขุนช้าง สุพรรณบุรี" };
 
@@ -30,4 +30,12 @@ test("invalid Place IDs and out-of-province coordinates are ignored", () => {
   const url = new URL(reviewMapsUrl({ ...base, google_place_id: "bad id&x=1" })!);
   assert.equal(url.searchParams.has("query_place_id"), false);
   assert.equal(reviewMapsUrl({ latitude: 13.75, longitude: 100.5, location_text: null }), null);
+});
+
+test("venueMapUrl only returns venue-specific links (for schema hasMap)", () => {
+  const link = "https://maps.app.goo.gl/aort6gmunAGHMkBHA";
+  assert.equal(venueMapUrl({ ...base, google_maps_url: link }), link);
+  assert.match(venueMapUrl({ ...base, google_place_id: "ChIJ_abc" })!, /query_place_id=ChIJ_abc/);
+  assert.equal(venueMapUrl({ ...base }), null);
+  assert.equal(venueMapUrl({ ...base, google_maps_url: "https://evil.example" }), null);
 });

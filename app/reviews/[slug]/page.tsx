@@ -9,7 +9,7 @@ import { VideoPlayer } from "@/components/video-player";
 import ReviewCard from "@/components/review-card";
 import { buildMetaDescription, MAX_META_DESCRIPTION_LENGTH } from "@/lib/seo-text";
 import { isSuphanBuriCoordinate } from "@/lib/location-validation";
-import { reviewMapsUrl } from "@/lib/maps-link";
+import { reviewMapsUrl, venueMapUrl } from "@/lib/maps-link";
 
 // app/reviews/[slug]/page.tsx
 // Review Detail Page — Server Component (SSR), Dynamic Route.
@@ -189,6 +189,10 @@ export default async function ReviewDetailPage(props: PageProps) {
       addressCountry: "TH",
     };
   }
+  // schema.org Place.hasMap: only a link to the venue's own Google Maps page
+  // (pasted share link or Place ID), never a bare coordinate search.
+  const hasMap = venueMapUrl(review);
+  if (hasMap) placeSchema.hasMap = hasMap;
   if (hasGeo) {
     placeSchema.geo = {
       "@type": "GeoCoordinates",

@@ -23,6 +23,16 @@ export function isValidPlaceId(value: unknown): value is string {
   return typeof value === "string" && PLACE_ID_PATTERN.test(value);
 }
 
+/**
+ * Link to the venue's own Google Maps page, or null when we only know a pin
+ * or address. Used for schema.org `hasMap`, which should point at the place
+ * itself rather than at a coordinate search.
+ */
+export function venueMapUrl(review: MappableReview): string | null {
+  if (review.google_maps_url && isGoogleMapsLink(review.google_maps_url)) return review.google_maps_url;
+  return isValidPlaceId(review.google_place_id) ? reviewMapsUrl(review) : null;
+}
+
 export function reviewMapsUrl(review: MappableReview): string | null {
   // A link pasted from Google Maps "Share" already opens the venue page.
   if (review.google_maps_url && isGoogleMapsLink(review.google_maps_url)) return review.google_maps_url;
